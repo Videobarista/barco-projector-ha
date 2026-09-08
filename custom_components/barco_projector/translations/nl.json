@@ -1,0 +1,158 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Barco cinemaprojector",
+        "description": "Vul het IP-adres van de projectorcontroller in. De besturingspoort is 43728 voor serie 2 (DP2K, DP4K) en 43680 voor serie 1 (DP90, DP100, DP1200, DP1500, DP2000, DP3000).",
+        "data": {
+          "name": "Naam",
+          "host": "Host",
+          "port": "Poort",
+          "media_block": "Media block"
+        },
+        "data_description": {
+          "media_block": "Kies ICMP als er een Barco ICMP of ICMP-X in zit en je ook de speler wilt bedienen."
+        }
+      },
+      "media_block": {
+        "title": "ICMP-automation",
+        "description": "De ICMP-automationserver luistert op TCP 43748, bereikbaar via de netwerkpoort van de projector of via een van de LAN-poorten van de ICMP. Laat de host leeg om het adres van de projector te gebruiken.",
+        "data": {
+          "media_block_host": "ICMP-host",
+          "media_block_port": "ICMP-poort"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "De projector antwoordde niet op dit adres en deze poort.",
+      "cannot_connect_icmp": "De ICMP-automationserver antwoordde niet op dit adres en deze poort."
+    },
+    "abort": {
+      "already_configured": "Deze projector is al geconfigureerd."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opties Barco cinemaprojector",
+        "data": {
+          "scan_interval_seconds": "Pollinterval",
+          "media_block": "Media block",
+          "media_block_host": "ICMP-host",
+          "media_block_port": "ICMP-poort"
+        },
+        "data_description": {
+          "scan_interval_seconds": "Het Barco-protocol is blokkerend, houd dit op 10 seconden of meer.",
+          "media_block_host": "Leeg laten om het adres van de projector te gebruiken."
+        }
+      }
+    }
+  },
+  "selector": {
+    "media_block": {
+      "options": {
+        "none": "Geen of niet ondersteund (IMB / IMS)",
+        "icmp": "Barco ICMP of ICMP-X"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "lamp": { "name": "Lamp" },
+      "connectivity": { "name": "Verbinding" }
+    },
+    "sensor": {
+      "last_macro": { "name": "Laatste macro" },
+      "dowser_state": {
+        "name": "Dowserstand",
+        "state": {
+          "closed": "Dicht",
+          "open": "Open",
+          "undetermined": "Onbepaald"
+        }
+      },
+      "errors": { "name": "Fouten" },
+      "warnings": { "name": "Waarschuwingen" },
+      "notifications": { "name": "Meldingen" },
+      "last_seen": { "name": "Laatst gezien" }
+    },
+    "switch": {
+      "dowser": { "name": "Dowser" },
+      "sleep_mode": { "name": "Slaapstand" },
+      "icmp_schedule": { "name": "Schedule" },
+      "icmp_repeat": { "name": "Herhalen" }
+    },
+    "button": {
+      "focus_near": { "name": "Focus dichterbij" },
+      "focus_far": { "name": "Focus verder weg" },
+      "zoom_in": { "name": "Inzoomen" },
+      "zoom_out": { "name": "Uitzoomen" },
+      "shift_up": { "name": "Shift omhoog" },
+      "shift_down": { "name": "Shift omlaag" },
+      "shift_left": { "name": "Shift naar links" },
+      "shift_right": { "name": "Shift naar rechts" },
+      "icmp_play_scheduled_show": { "name": "Geplande show starten" },
+      "icmp_emergency_stop": { "name": "Noodstop" },
+      "icmp_jump_to_clip_end": { "name": "Naar einde clip" },
+      "icmp_recover": { "name": "Herstellen" },
+      "icmp_recover_and_play": { "name": "Herstellen en afspelen" },
+      "icmp_ignore_recovery": { "name": "Herstel negeren" },
+      "icmp_clear": { "name": "Leegmaken" }
+    }
+  },
+  "services": {
+    "execute_macro": {
+      "name": "Macro uitvoeren",
+      "description": "Voert een macro (preset) uit die op de projector staat.",
+      "fields": {
+        "macro": {
+          "name": "Macro",
+          "description": "De naam van de macro, exact zoals hij op de projector staat."
+        }
+      }
+    },
+    "send_raw": {
+      "name": "Ruw commando sturen",
+      "description": "Stuurt een willekeurig Barco-commando. Framing, escaping en checksum worden voor je gedaan.",
+      "fields": {
+        "command": {
+          "name": "Commando",
+          "description": "Commandobytes in hex, bijvoorbeeld 76 9a."
+        },
+        "data": {
+          "name": "Data",
+          "description": "Optionele databytes in hex."
+        }
+      }
+    },
+    "send_automation": {
+      "name": "Automation-commando sturen",
+      "description": "Stuurt een ruw Automation over IP-commando naar de ICMP.",
+      "fields": {
+        "command": {
+          "name": "Commando",
+          "description": "Bijvoorbeeld PLAYER.Pause (seconds),10 - de puntkomma wordt automatisch toegevoegd."
+        }
+      }
+    },
+    "gpio_pulse": {
+      "name": "GPIO-uitgang pulsen",
+      "description": "Geeft een puls op een van de GPIO-uitgangen van de ICMP.",
+      "fields": {
+        "output": { "name": "Uitgang", "description": "Uitgangsnummer, 1 tot en met 8." },
+        "duration": { "name": "Duur", "description": "Pulsduur in milliseconden." },
+        "direction": { "name": "Richting", "description": "Puls omhoog of omlaag." }
+      }
+    },
+    "gpio_set": {
+      "name": "GPIO-uitgangen zetten",
+      "description": "Zet een of meer GPIO-uitgangen van de ICMP.",
+      "fields": {
+        "mask": {
+          "name": "Masker",
+          "description": "Lijst met uitgangen, bijvoorbeeld 1=Up,2=Down,3=Down."
+        }
+      }
+    }
+  }
+}

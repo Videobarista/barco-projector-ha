@@ -1,0 +1,158 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Barco cinema projector",
+        "description": "Enter the IP address of the projector controller. The control port is 43728 for series 2 projectors (DP2K, DP4K) and 43680 for series 1 (DP90, DP100, DP1200, DP1500, DP2000, DP3000).",
+        "data": {
+          "name": "Name",
+          "host": "Host",
+          "port": "Port",
+          "media_block": "Media block"
+        },
+        "data_description": {
+          "media_block": "Choose ICMP when a Barco ICMP or ICMP-X is installed and you want player control as well."
+        }
+      },
+      "media_block": {
+        "title": "ICMP automation",
+        "description": "The ICMP automation server listens on TCP 43748, reachable through the projector network interface or one of the ICMP LAN ports. Leave the host empty to use the projector address.",
+        "data": {
+          "media_block_host": "ICMP host",
+          "media_block_port": "ICMP port"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "The projector did not answer on this address and port.",
+      "cannot_connect_icmp": "The ICMP automation server did not answer on this address and port."
+    },
+    "abort": {
+      "already_configured": "This projector is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Barco cinema projector options",
+        "data": {
+          "scan_interval_seconds": "Poll interval",
+          "media_block": "Media block",
+          "media_block_host": "ICMP host",
+          "media_block_port": "ICMP port"
+        },
+        "data_description": {
+          "scan_interval_seconds": "The Barco protocol is blocking, so keep this at 10 seconds or more.",
+          "media_block_host": "Leave empty to use the projector address."
+        }
+      }
+    }
+  },
+  "selector": {
+    "media_block": {
+      "options": {
+        "none": "None or unsupported (IMB / IMS)",
+        "icmp": "Barco ICMP or ICMP-X"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "lamp": { "name": "Lamp" },
+      "connectivity": { "name": "Connectivity" }
+    },
+    "sensor": {
+      "last_macro": { "name": "Last macro" },
+      "dowser_state": {
+        "name": "Dowser position",
+        "state": {
+          "closed": "Closed",
+          "open": "Open",
+          "undetermined": "Undetermined"
+        }
+      },
+      "errors": { "name": "Errors" },
+      "warnings": { "name": "Warnings" },
+      "notifications": { "name": "Notifications" },
+      "last_seen": { "name": "Last seen" }
+    },
+    "switch": {
+      "dowser": { "name": "Dowser" },
+      "sleep_mode": { "name": "Sleep mode" },
+      "icmp_schedule": { "name": "Schedule" },
+      "icmp_repeat": { "name": "Repeat" }
+    },
+    "button": {
+      "focus_near": { "name": "Focus near" },
+      "focus_far": { "name": "Focus far" },
+      "zoom_in": { "name": "Zoom in" },
+      "zoom_out": { "name": "Zoom out" },
+      "shift_up": { "name": "Shift up" },
+      "shift_down": { "name": "Shift down" },
+      "shift_left": { "name": "Shift left" },
+      "shift_right": { "name": "Shift right" },
+      "icmp_play_scheduled_show": { "name": "Play scheduled show" },
+      "icmp_emergency_stop": { "name": "Emergency stop" },
+      "icmp_jump_to_clip_end": { "name": "Jump to clip end" },
+      "icmp_recover": { "name": "Recover" },
+      "icmp_recover_and_play": { "name": "Recover and play" },
+      "icmp_ignore_recovery": { "name": "Ignore recovery" },
+      "icmp_clear": { "name": "Clear" }
+    }
+  },
+  "services": {
+    "execute_macro": {
+      "name": "Execute macro",
+      "description": "Executes a macro (preset) stored on the projector.",
+      "fields": {
+        "macro": {
+          "name": "Macro",
+          "description": "The name of the macro, exactly as stored on the projector."
+        }
+      }
+    },
+    "send_raw": {
+      "name": "Send raw command",
+      "description": "Sends an arbitrary Barco command. Framing, escaping and the checksum are handled for you.",
+      "fields": {
+        "command": {
+          "name": "Command",
+          "description": "Command bytes as hex, for example 76 9a."
+        },
+        "data": {
+          "name": "Data",
+          "description": "Optional data bytes as hex."
+        }
+      }
+    },
+    "send_automation": {
+      "name": "Send automation command",
+      "description": "Sends a raw Automation over IP command to the ICMP.",
+      "fields": {
+        "command": {
+          "name": "Command",
+          "description": "For example PLAYER.Pause (seconds),10 - the trailing semicolon is added automatically."
+        }
+      }
+    },
+    "gpio_pulse": {
+      "name": "Pulse GPIO output",
+      "description": "Pulses one of the ICMP GPIO outputs.",
+      "fields": {
+        "output": { "name": "Output", "description": "Output index, 1 to 8." },
+        "duration": { "name": "Duration", "description": "Pulse duration in milliseconds." },
+        "direction": { "name": "Direction", "description": "Pulse up or down." }
+      }
+    },
+    "gpio_set": {
+      "name": "Set GPIO outputs",
+      "description": "Sets one or more ICMP GPIO outputs.",
+      "fields": {
+        "mask": {
+          "name": "Mask",
+          "description": "Output list, for example 1=Up,2=Down,3=Down."
+        }
+      }
+    }
+  }
+}

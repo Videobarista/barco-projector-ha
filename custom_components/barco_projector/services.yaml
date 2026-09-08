@@ -1,0 +1,83 @@
+execute_macro:
+  target:
+    entity:
+      integration: barco_projector
+      domain: media_player
+  fields:
+    macro:
+      required: true
+      example: "2D_FLAT"
+      selector:
+        text:
+
+send_raw:
+  target:
+    entity:
+      integration: barco_projector
+      domain: media_player
+  fields:
+    command:
+      required: true
+      example: "76 9a"
+      selector:
+        text:
+    data:
+      required: false
+      example: "01"
+      selector:
+        text:
+
+send_automation:
+  target:
+    entity:
+      integration: barco_projector
+      domain: media_player
+  fields:
+    command:
+      required: true
+      example: 'PLAYER.Pause (seconds),10'
+      selector:
+        text:
+
+gpio_pulse:
+  target:
+    entity:
+      integration: barco_projector
+      domain: media_player
+  fields:
+    output:
+      required: true
+      example: 1
+      selector:
+        number:
+          min: 1
+          max: 8
+          mode: box
+    duration:
+      required: false
+      example: 500
+      selector:
+        number:
+          min: 1
+          max: 60000
+          unit_of_measurement: ms
+          mode: box
+    direction:
+      required: false
+      selector:
+        select:
+          options:
+            - "up"
+            - "down"
+
+gpio_set:
+  target:
+    entity:
+      integration: barco_projector
+      domain: media_player
+  fields:
+    mask:
+      required: true
+      example: "1=Up,2=Down"
+      selector:
+        text:
