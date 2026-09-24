@@ -66,6 +66,7 @@ gpio_pulse:
       required: false
       selector:
         select:
+          translation_key: gpio_direction
           options:
             - "up"
             - "down"

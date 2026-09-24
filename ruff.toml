@@ -1,0 +1,26 @@
+target-version = "py312"
+line-length = 88
+
+[lint]
+select = [
+  "B",   # flake8-bugbear
+  "D",   # pydocstyle
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "I",   # isort
+  "UP",  # pyupgrade
+  "W",   # pycodestyle warnings
+]
+ignore = [
+  "D203",  # incompatible with D211
+  "D213",  # incompatible with D212
+  "E501",  # line length is left to the formatter
+]
+
+[lint.isort]
+force-sort-within-sections = true
+known-first-party = ["homeassistant"]
+combine-as-imports = true
+
+[lint.pydocstyle]
+convention = "pep257"

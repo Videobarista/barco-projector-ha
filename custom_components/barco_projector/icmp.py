@@ -94,11 +94,12 @@ class IcmpClient:
         try:
             writer.close()
             await writer.wait_closed()
-        except (OSError, asyncio.TimeoutError):  # pragma: no cover
-            pass
+        except (OSError, asyncio.TimeoutError) as err:
+            _LOGGER.debug("Error while closing the connection: %s", err)
 
     async def _write(self, command: str) -> None:
-        assert self._writer is not None
+        if self._writer is None:
+            raise IcmpConnectionError("not connected")
         _LOGGER.debug("ICMP TX %s", command)
         self._writer.write(command.encode("ascii", errors="ignore"))
         await self._writer.drain()
@@ -108,7 +109,8 @@ class IcmpClient:
             return None
         try:
             raw = await asyncio.wait_for(self._reader.read(128), READ_TIMEOUT)
-        except (asyncio.TimeoutError, OSError):
+        except (asyncio.TimeoutError, OSError) as err:
+            _LOGGER.debug("No acknowledgement read back: %s", err)
             return None
         if not raw:
             return None

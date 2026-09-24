@@ -54,15 +54,27 @@
         "none": "None or unsupported (IMB / IMS)",
         "icmp": "Barco ICMP or ICMP-X"
       }
+    },
+    "gpio_direction": {
+      "options": {
+        "up": "Up",
+        "down": "Down"
+      }
     }
   },
   "entity": {
     "binary_sensor": {
-      "lamp": { "name": "Lamp" },
-      "connectivity": { "name": "Connectivity" }
+      "lamp": {
+        "name": "Lamp"
+      },
+      "connectivity": {
+        "name": "Connectivity"
+      }
     },
     "sensor": {
-      "last_macro": { "name": "Last macro" },
+      "last_macro": {
+        "name": "Last macro"
+      },
       "dowser_state": {
         "name": "Dowser position",
         "state": {
@@ -71,33 +83,79 @@
           "undetermined": "Undetermined"
         }
       },
-      "errors": { "name": "Errors" },
-      "warnings": { "name": "Warnings" },
-      "notifications": { "name": "Notifications" },
-      "last_seen": { "name": "Last seen" }
+      "errors": {
+        "name": "Errors"
+      },
+      "warnings": {
+        "name": "Warnings"
+      },
+      "notifications": {
+        "name": "Notifications"
+      },
+      "last_seen": {
+        "name": "Last seen"
+      }
     },
     "switch": {
-      "dowser": { "name": "Dowser" },
-      "sleep_mode": { "name": "Sleep mode" },
-      "icmp_schedule": { "name": "Schedule" },
-      "icmp_repeat": { "name": "Repeat" }
+      "dowser": {
+        "name": "Dowser"
+      },
+      "sleep_mode": {
+        "name": "Sleep mode"
+      },
+      "icmp_schedule": {
+        "name": "Schedule"
+      },
+      "icmp_repeat": {
+        "name": "Repeat"
+      }
     },
     "button": {
-      "focus_near": { "name": "Focus near" },
-      "focus_far": { "name": "Focus far" },
-      "zoom_in": { "name": "Zoom in" },
-      "zoom_out": { "name": "Zoom out" },
-      "shift_up": { "name": "Shift up" },
-      "shift_down": { "name": "Shift down" },
-      "shift_left": { "name": "Shift left" },
-      "shift_right": { "name": "Shift right" },
-      "icmp_play_scheduled_show": { "name": "Play scheduled show" },
-      "icmp_emergency_stop": { "name": "Emergency stop" },
-      "icmp_jump_to_clip_end": { "name": "Jump to clip end" },
-      "icmp_recover": { "name": "Recover" },
-      "icmp_recover_and_play": { "name": "Recover and play" },
-      "icmp_ignore_recovery": { "name": "Ignore recovery" },
-      "icmp_clear": { "name": "Clear" }
+      "focus_near": {
+        "name": "Focus near"
+      },
+      "focus_far": {
+        "name": "Focus far"
+      },
+      "zoom_in": {
+        "name": "Zoom in"
+      },
+      "zoom_out": {
+        "name": "Zoom out"
+      },
+      "shift_up": {
+        "name": "Shift up"
+      },
+      "shift_down": {
+        "name": "Shift down"
+      },
+      "shift_left": {
+        "name": "Shift left"
+      },
+      "shift_right": {
+        "name": "Shift right"
+      },
+      "icmp_play_scheduled_show": {
+        "name": "Play scheduled show"
+      },
+      "icmp_emergency_stop": {
+        "name": "Emergency stop"
+      },
+      "icmp_jump_to_clip_end": {
+        "name": "Jump to clip end"
+      },
+      "icmp_recover": {
+        "name": "Recover"
+      },
+      "icmp_recover_and_play": {
+        "name": "Recover and play"
+      },
+      "icmp_ignore_recovery": {
+        "name": "Ignore recovery"
+      },
+      "icmp_clear": {
+        "name": "Clear"
+      }
     }
   },
   "services": {
@@ -139,9 +197,18 @@
       "name": "Pulse GPIO output",
       "description": "Pulses one of the ICMP GPIO outputs.",
       "fields": {
-        "output": { "name": "Output", "description": "Output index, 1 to 8." },
-        "duration": { "name": "Duration", "description": "Pulse duration in milliseconds." },
-        "direction": { "name": "Direction", "description": "Pulse up or down." }
+        "output": {
+          "name": "Output",
+          "description": "Output index, 1 to 8."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "Pulse duration in milliseconds."
+        },
+        "direction": {
+          "name": "Direction",
+          "description": "Pulse up or down."
+        }
       }
     },
     "gpio_set": {

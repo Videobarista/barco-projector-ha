@@ -247,8 +247,9 @@ class BarcoIcmpMediaPlayer(BarcoMediaBlockEntity, MediaPlayerEntity):
         self._attr_available = True
 
     async def async_media_play(self) -> None:
-        """Start playback."""
-        await self._send("Play")
+        """Start playback, or resume when the player was paused."""
+        action = "Resume" if self._attr_state == MediaPlayerState.PAUSED else "Play"
+        await self._send(action)
         self._attr_state = MediaPlayerState.PLAYING
         self.async_write_ha_state()
 

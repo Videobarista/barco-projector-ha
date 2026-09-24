@@ -54,15 +54,27 @@
         "none": "Geen of niet ondersteund (IMB / IMS)",
         "icmp": "Barco ICMP of ICMP-X"
       }
+    },
+    "gpio_direction": {
+      "options": {
+        "up": "Omhoog",
+        "down": "Omlaag"
+      }
     }
   },
   "entity": {
     "binary_sensor": {
-      "lamp": { "name": "Lamp" },
-      "connectivity": { "name": "Verbinding" }
+      "lamp": {
+        "name": "Lamp"
+      },
+      "connectivity": {
+        "name": "Verbinding"
+      }
     },
     "sensor": {
-      "last_macro": { "name": "Laatste macro" },
+      "last_macro": {
+        "name": "Laatste macro"
+      },
       "dowser_state": {
         "name": "Dowserstand",
         "state": {
@@ -71,33 +83,79 @@
           "undetermined": "Onbepaald"
         }
       },
-      "errors": { "name": "Fouten" },
-      "warnings": { "name": "Waarschuwingen" },
-      "notifications": { "name": "Meldingen" },
-      "last_seen": { "name": "Laatst gezien" }
+      "errors": {
+        "name": "Fouten"
+      },
+      "warnings": {
+        "name": "Waarschuwingen"
+      },
+      "notifications": {
+        "name": "Meldingen"
+      },
+      "last_seen": {
+        "name": "Laatst gezien"
+      }
     },
     "switch": {
-      "dowser": { "name": "Dowser" },
-      "sleep_mode": { "name": "Slaapstand" },
-      "icmp_schedule": { "name": "Schedule" },
-      "icmp_repeat": { "name": "Herhalen" }
+      "dowser": {
+        "name": "Dowser"
+      },
+      "sleep_mode": {
+        "name": "Slaapstand"
+      },
+      "icmp_schedule": {
+        "name": "Schedule"
+      },
+      "icmp_repeat": {
+        "name": "Herhalen"
+      }
     },
     "button": {
-      "focus_near": { "name": "Focus dichterbij" },
-      "focus_far": { "name": "Focus verder weg" },
-      "zoom_in": { "name": "Inzoomen" },
-      "zoom_out": { "name": "Uitzoomen" },
-      "shift_up": { "name": "Shift omhoog" },
-      "shift_down": { "name": "Shift omlaag" },
-      "shift_left": { "name": "Shift naar links" },
-      "shift_right": { "name": "Shift naar rechts" },
-      "icmp_play_scheduled_show": { "name": "Geplande show starten" },
-      "icmp_emergency_stop": { "name": "Noodstop" },
-      "icmp_jump_to_clip_end": { "name": "Naar einde clip" },
-      "icmp_recover": { "name": "Herstellen" },
-      "icmp_recover_and_play": { "name": "Herstellen en afspelen" },
-      "icmp_ignore_recovery": { "name": "Herstel negeren" },
-      "icmp_clear": { "name": "Leegmaken" }
+      "focus_near": {
+        "name": "Focus dichterbij"
+      },
+      "focus_far": {
+        "name": "Focus verder weg"
+      },
+      "zoom_in": {
+        "name": "Inzoomen"
+      },
+      "zoom_out": {
+        "name": "Uitzoomen"
+      },
+      "shift_up": {
+        "name": "Shift omhoog"
+      },
+      "shift_down": {
+        "name": "Shift omlaag"
+      },
+      "shift_left": {
+        "name": "Shift naar links"
+      },
+      "shift_right": {
+        "name": "Shift naar rechts"
+      },
+      "icmp_play_scheduled_show": {
+        "name": "Geplande show starten"
+      },
+      "icmp_emergency_stop": {
+        "name": "Noodstop"
+      },
+      "icmp_jump_to_clip_end": {
+        "name": "Naar einde clip"
+      },
+      "icmp_recover": {
+        "name": "Herstellen"
+      },
+      "icmp_recover_and_play": {
+        "name": "Herstellen en afspelen"
+      },
+      "icmp_ignore_recovery": {
+        "name": "Herstel negeren"
+      },
+      "icmp_clear": {
+        "name": "Leegmaken"
+      }
     }
   },
   "services": {
@@ -139,9 +197,18 @@
       "name": "GPIO-uitgang pulsen",
       "description": "Geeft een puls op een van de GPIO-uitgangen van de ICMP.",
       "fields": {
-        "output": { "name": "Uitgang", "description": "Uitgangsnummer, 1 tot en met 8." },
-        "duration": { "name": "Duur", "description": "Pulsduur in milliseconden." },
-        "direction": { "name": "Richting", "description": "Puls omhoog of omlaag." }
+        "output": {
+          "name": "Uitgang",
+          "description": "Uitgangsnummer, 1 tot en met 8."
+        },
+        "duration": {
+          "name": "Duur",
+          "description": "Pulsduur in milliseconden."
+        },
+        "direction": {
+          "name": "Richting",
+          "description": "Puls omhoog of omlaag."
+        }
       }
     },
     "gpio_set": {

@@ -208,8 +208,8 @@ class BarcoClient:
         try:
             writer.close()
             await writer.wait_closed()
-        except (OSError, asyncio.TimeoutError):  # pragma: no cover
-            pass
+        except (OSError, asyncio.TimeoutError) as err:
+            _LOGGER.debug("Error while closing the connection: %s", err)
 
     async def async_request(
         self, command: bytes, data: bytes = b"", *, expect_answer: bool = False
@@ -247,7 +247,8 @@ class BarcoClient:
     async def _transact(
         self, command: bytes, data: bytes, expect_answer: bool
     ) -> bytes:
-        assert self._reader is not None and self._writer is not None
+        if self._writer is None:
+            raise BarcoConnectionError("not connected")
         frame = build_frame(self.address, command, data)
         _LOGGER.debug("TX %s", frame.hex(" "))
         self._writer.write(frame)
@@ -265,7 +266,8 @@ class BarcoClient:
         return self._strip_echo(command, payload)
 
     async def _read_frame(self) -> tuple[int, bytes]:
-        assert self._reader is not None
+        if self._reader is None:
+            raise BarcoConnectionError("not connected")
         raw = await asyncio.wait_for(
             self._reader.readuntil(bytes([STOP])), self.timeout
         )

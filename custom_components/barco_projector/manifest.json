@@ -1,12 +1,12 @@
 {
   "domain": "barco_projector",
   "name": "Barco Cinema Projector",
-  "codeowners": ["@VideoBarista"],
+  "codeowners": ["@Videobarista"],
   "config_flow": true,
-  "documentation": "https://github.com/HuisAutomatisering/barco-projector-ha",
+  "documentation": "https://github.com/Videobarista/barco-projector-ha",
   "integration_type": "device",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/HuisAutomatisering/barco-projector-ha/issues",
+  "issue_tracker": "https://github.com/Videobarista/barco-projector-ha/issues",
   "requirements": [],
   "version": "0.1.0"
 }
