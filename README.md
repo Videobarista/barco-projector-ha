@@ -87,7 +87,7 @@ folder and restart.
 
 ## Known limitations
 
-- The source list is built from the macros bound to keypad buttons 1-16. Macros that are not
+- The source list is built from the macros bound to keypad buttons 1-32. Macros that are not
   bound to a button do not appear; use the `execute_macro` service for those.
 - Formats and inputs are not separate commands in the Barco protocol; they live inside
   macros. That is why macros are the source list.

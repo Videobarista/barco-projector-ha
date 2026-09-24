@@ -76,7 +76,7 @@ class IcmpClient:
             self._reader, self._writer = await asyncio.wait_for(
                 asyncio.open_connection(self.host, self.port), self.timeout
             )
-        except (OSError, asyncio.TimeoutError) as err:
+        except (OSError, TimeoutError) as err:
             self._reader = self._writer = None
             raise IcmpConnectionError(
                 f"cannot connect to {self.host}:{self.port}: {err}"
@@ -94,7 +94,7 @@ class IcmpClient:
         try:
             writer.close()
             await writer.wait_closed()
-        except (OSError, asyncio.TimeoutError) as err:
+        except (OSError, TimeoutError) as err:
             _LOGGER.debug("Error while closing the connection: %s", err)
 
     async def _write(self, command: str) -> None:
@@ -109,7 +109,7 @@ class IcmpClient:
             return None
         try:
             raw = await asyncio.wait_for(self._reader.read(128), READ_TIMEOUT)
-        except (asyncio.TimeoutError, OSError) as err:
+        except (TimeoutError, OSError) as err:
             _LOGGER.debug("No acknowledgement read back: %s", err)
             return None
         if not raw:
@@ -134,7 +134,7 @@ class IcmpClient:
                     return
                 except IcmpNotAcknowledged:
                     raise
-                except (OSError, asyncio.TimeoutError, IcmpConnectionError) as err:
+                except (OSError, TimeoutError, IcmpConnectionError) as err:
                     last_error = err
                     await self._close()
                     if attempt == 2:

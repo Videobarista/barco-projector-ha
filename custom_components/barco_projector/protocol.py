@@ -1,12 +1,12 @@
-"""Client for the Barco LCD/DLP protocol used by DP/DP2K cinema projectors.
+r"""Client for the Barco LCD/DLP protocol used by DP/DP2K cinema projectors.
 
 The protocol is a byte framed request/response protocol, originally designed
 for RS232 and later exposed over TCP.  Framing::
 
-    \\xfe <address> <command bytes> [<data bytes>] <checksum> \\xff
+    \xfe <address> <command bytes> [<data bytes>] <checksum> \xff
 
 The checksum is ``(address + command + data) modulo 256``.  Any command, data
-or checksum byte equal to \\x80, \\xfe or \\xff is escaped on the wire.
+or checksum byte equal to \x80, \xfe or \xff is escaped on the wire.
 
 Communication is strictly blocking: one request at a time, the projector never
 talks on its own initiative.  Every request is answered with an acknowledge
@@ -194,7 +194,7 @@ class BarcoClient:
             self._reader, self._writer = await asyncio.wait_for(
                 asyncio.open_connection(self.host, self.port), self.timeout
             )
-        except (OSError, asyncio.TimeoutError) as err:
+        except (OSError, TimeoutError) as err:
             self._reader = self._writer = None
             raise BarcoConnectionError(
                 f"cannot connect to {self.host}:{self.port}: {err}"
@@ -208,7 +208,7 @@ class BarcoClient:
         try:
             writer.close()
             await writer.wait_closed()
-        except (OSError, asyncio.TimeoutError) as err:
+        except (OSError, TimeoutError) as err:
             _LOGGER.debug("Error while closing the connection: %s", err)
 
     async def async_request(
@@ -231,7 +231,7 @@ class BarcoClient:
                     OSError,
                     asyncio.IncompleteReadError,
                     asyncio.LimitOverrunError,
-                    asyncio.TimeoutError,
+                    TimeoutError,
                     BarcoProtocolError,
                     BarcoConnectionError,
                 ) as err:

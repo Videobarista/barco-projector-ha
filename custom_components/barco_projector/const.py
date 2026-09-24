@@ -31,8 +31,9 @@ MIN_SCAN_INTERVAL: Final = 10
 # How many polls between refreshes of the macro (source) list
 MACRO_REFRESH_EVERY: Final = 20
 
-# Highest macro button number probed when building the source list
-MAX_MACRO_BUTTONS: Final = 16
+# Highest macro button number probed when building the source list. Read as one
+# range first; projectors that reject the range fall back to single reads.
+MAX_MACRO_BUTTONS: Final = 32
 
 SERVICE_EXECUTE_MACRO: Final = "execute_macro"
 SERVICE_SEND_RAW: Final = "send_raw"
