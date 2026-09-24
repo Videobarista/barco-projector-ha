@@ -17,7 +17,8 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v5
 
+      # Run Ruff directly instead of through an action: the action still ships a
+      # Node 20 entrypoint, and a pinned version keeps the badge stable when new
+      # rules are released.
       - name: Run Ruff
-        uses: astral-sh/ruff-action@v3
-        with:
-          args: check --output-format github
+        run: pipx run ruff==0.16.8 check --output-format github .
