@@ -89,6 +89,13 @@ folder and restart.
 
 ## Configuration
 
+When you add the integration it first sends a UDP discovery broadcast and lists the
+projectors that answer, with their model and hostname. Pick one and the address is filled
+in for you, and the model is stored so the device page shows "DP2K-6E" rather than a
+generic name. Nothing answering is not an error: the flow drops straight through to manual
+entry. Entries created before discovery existed can pick the model up by opening the
+integration options and saving.
+
 - **Host**: IP address of the projector controller. On series 1 projectors this is the main
   controller address, not the Texas Instruments front end.
 - **Port**: `43728` for series 2 (DP2K, DP4K), `43680` for series 1.
@@ -109,6 +116,8 @@ folder and restart.
   dowser command the integration re-polls at 2, 10, 30 and 60 seconds.
 - Series 2 projectors close an idle socket after 15 minutes. The client reconnects
   transparently, so keep the poll interval well below that.
+- Discovery is a broadcast to port 0xA001, so it does not cross VLANs or reach a projector
+  behind a router. On a segmented network, enter the address by hand.
 - A projector stops answering for several seconds while the lamp ignites. The read timeout
   is 15 seconds and a timed-out request is retried once on a fresh connection.
 - Barco's documentation contains one example frame with a miscalculated checksum (lamp write

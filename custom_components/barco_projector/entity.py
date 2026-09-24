@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.const import CONF_HOST
+from homeassistant.const import CONF_HOST, CONF_MODEL
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -21,7 +21,7 @@ def projector_device_info(entry) -> DeviceInfo:
         identifiers={(DOMAIN, entry.entry_id)},
         manufacturer=MANUFACTURER,
         name=entry.title,
-        model=PROJECTOR_MODEL,
+        model=entry.data.get(CONF_MODEL) or PROJECTOR_MODEL,
         configuration_url=f"http://{entry.data[CONF_HOST]}",
     )
 

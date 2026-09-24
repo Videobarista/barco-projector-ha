@@ -1,7 +1,14 @@
 {
   "config": {
     "step": {
-      "user": {
+      "pick": {
+        "title": "Barco projectors found",
+        "description": "These projectors answered the discovery broadcast. Pick one, or choose the last option to enter an address yourself.",
+        "data": {
+          "device": "Projector"
+        }
+      },
+      "manual": {
         "title": "Barco cinema projector",
         "description": "Enter the IP address of the projector controller. The control port is 43728 for series 2 projectors (DP2K, DP4K) and 43680 for series 1 (DP90, DP100, DP1200, DP1500, DP2000, DP3000).",
         "data": {

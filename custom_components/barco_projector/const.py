@@ -7,6 +7,8 @@ from typing import Final
 DOMAIN: Final = "barco_projector"
 
 MANUFACTURER: Final = "Barco"
+DEFAULT_NAME: Final = "Barco projector"
+MANUAL_ENTRY: Final = "manual"
 PROJECTOR_MODEL: Final = "Digital cinema projector"
 MEDIA_BLOCK_MODEL: Final = "ICMP / ICMP-X"
 

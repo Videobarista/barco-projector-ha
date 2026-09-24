@@ -12,12 +12,13 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
+from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_MODEL, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -30,13 +31,16 @@ from .const import (
     CONF_MEDIA_BLOCK_PORT,
     CONF_SCAN_INTERVAL_SECONDS,
     DEFAULT_ICMP_PORT,
+    DEFAULT_NAME,
     DEFAULT_PORT,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    MANUAL_ENTRY,
     MEDIA_BLOCK_ICMP,
     MEDIA_BLOCK_NONE,
     MIN_SCAN_INTERVAL,
 )
+from .discovery import DiscoveredProjector, async_discover, async_discover_model
 from .icmp import IcmpClient, IcmpError
 from .protocol import BarcoClient, BarcoError, BarcoProjector
 
@@ -47,14 +51,20 @@ PORT_SELECTOR = NumberSelector(
 )
 
 
-def _user_schema(defaults: dict[str, Any]) -> vol.Schema:
+def _manual_schema(defaults: dict[str, Any]) -> vol.Schema:
+    """Return the schema of the manual entry form."""
     return vol.Schema(
         {
-            vol.Required(CONF_NAME, default=defaults.get(CONF_NAME, "Barco projector")): TextSelector(),
-            vol.Required(CONF_HOST, default=defaults.get(CONF_HOST, "")): TextSelector(),
-            vol.Required(CONF_PORT, default=defaults.get(CONF_PORT, DEFAULT_PORT)): PORT_SELECTOR,
             vol.Required(
-                CONF_MEDIA_BLOCK, default=defaults.get(CONF_MEDIA_BLOCK, MEDIA_BLOCK_NONE)
+                CONF_NAME, default=defaults.get(CONF_NAME, DEFAULT_NAME)
+            ): TextSelector(),
+            vol.Required(CONF_HOST, default=defaults.get(CONF_HOST, "")): TextSelector(),
+            vol.Required(
+                CONF_PORT, default=defaults.get(CONF_PORT, DEFAULT_PORT)
+            ): PORT_SELECTOR,
+            vol.Required(
+                CONF_MEDIA_BLOCK,
+                default=defaults.get(CONF_MEDIA_BLOCK, MEDIA_BLOCK_NONE),
             ): SelectSelector(
                 SelectSelectorConfig(
                     options=MEDIA_BLOCK_OPTIONS,
@@ -67,6 +77,7 @@ def _user_schema(defaults: dict[str, Any]) -> vol.Schema:
 
 
 def _media_block_schema(defaults: dict[str, Any]) -> vol.Schema:
+    """Return the schema of the ICMP form."""
     return vol.Schema(
         {
             vol.Optional(
@@ -113,8 +124,50 @@ class BarcoConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Initialise the flow."""
         self._data: dict[str, Any] = {}
+        self._discovered: list[DiscoveredProjector] = []
+        self._selected: DiscoveredProjector | None = None
 
     async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Look for projectors on the network before asking anything."""
+        self._discovered = await async_discover(self.hass)
+        if self._discovered:
+            return await self.async_step_pick()
+        return await self.async_step_manual()
+
+    async def async_step_pick(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Let the user pick one of the discovered projectors."""
+        if user_input is not None:
+            choice = user_input[CONF_DEVICE]
+            self._selected = next(
+                (item for item in self._discovered if item.host == choice), None
+            )
+            return await self.async_step_manual()
+
+        options = [
+            SelectOptionDict(value=item.host, label=item.label)
+            for item in self._discovered
+        ]
+        options.append(
+            SelectOptionDict(value=MANUAL_ENTRY, label="Other - enter an address")
+        )
+        return self.async_show_form(
+            step_id="pick",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_DEVICE, default=options[0]["value"]): SelectSelector(
+                        SelectSelectorConfig(
+                            options=options, mode=SelectSelectorMode.LIST
+                        )
+                    )
+                }
+            ),
+        )
+
+    async def async_step_manual(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Ask for the projector connection details."""
@@ -135,6 +188,9 @@ class BarcoConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_PORT: port,
                     CONF_MEDIA_BLOCK: user_input[CONF_MEDIA_BLOCK],
                 }
+                model = self._model_for(host)
+                if model:
+                    self._data[CONF_MODEL] = model
                 if user_input[CONF_MEDIA_BLOCK] == MEDIA_BLOCK_ICMP:
                     return await self.async_step_media_block()
                 return self.async_create_entry(
@@ -142,8 +198,8 @@ class BarcoConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
 
         return self.async_show_form(
-            step_id="user",
-            data_schema=_user_schema(user_input or {}),
+            step_id="manual",
+            data_schema=_manual_schema(user_input or self._defaults()),
             errors=errors,
         )
 
@@ -171,6 +227,22 @@ class BarcoConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    def _defaults(self) -> dict[str, Any]:
+        """Prefill the manual form with what discovery found."""
+        if self._selected is None:
+            return {}
+        return {
+            CONF_NAME: self._selected.model or self._selected.hostname or DEFAULT_NAME,
+            CONF_HOST: self._selected.host,
+        }
+
+    def _model_for(self, host: str) -> str | None:
+        """Return the discovered model for this address, if any."""
+        for item in self._discovered:
+            if item.host == host and item.model:
+                return item.model
+        return None
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
@@ -186,8 +258,8 @@ class BarcoOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         """Manage the options."""
         current = {**self.config_entry.data, **self.config_entry.options}
-
         errors: dict[str, str] = {}
+
         if user_input is not None:
             media_block = user_input[CONF_MEDIA_BLOCK]
             icmp_host = (user_input.get(CONF_MEDIA_BLOCK_HOST) or "").strip()
@@ -203,6 +275,7 @@ class BarcoOptionsFlow(OptionsFlow):
             if error:
                 errors["base"] = error
             else:
+                await self._async_fill_in_model()
                 return self.async_create_entry(
                     data={
                         CONF_SCAN_INTERVAL_SECONDS: int(
@@ -253,3 +326,14 @@ class BarcoOptionsFlow(OptionsFlow):
         return self.async_show_form(
             step_id="init", data_schema=schema, errors=errors
         )
+
+    async def _async_fill_in_model(self) -> None:
+        """Look the model up once for entries created before discovery existed."""
+        entry = self.config_entry
+        if entry.data.get(CONF_MODEL):
+            return
+        model = await async_discover_model(self.hass, entry.data[CONF_HOST])
+        if model:
+            self.hass.config_entries.async_update_entry(
+                entry, data={**entry.data, CONF_MODEL: model}
+            )

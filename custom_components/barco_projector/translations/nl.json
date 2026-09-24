@@ -1,7 +1,14 @@
 {
   "config": {
     "step": {
-      "user": {
+      "pick": {
+        "title": "Barco-projectoren gevonden",
+        "description": "Deze projectoren antwoordden op de zoekopdracht. Kies er een, of kies de laatste optie om zelf een adres in te vullen.",
+        "data": {
+          "device": "Projector"
+        }
+      },
+      "manual": {
         "title": "Barco cinemaprojector",
         "description": "Vul het IP-adres van de projectorcontroller in. De besturingspoort is 43728 voor serie 2 (DP2K, DP4K) en 43680 voor serie 1 (DP90, DP100, DP1200, DP1500, DP2000, DP3000).",
         "data": {
