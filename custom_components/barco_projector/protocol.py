@@ -161,7 +161,7 @@ class BarcoClient:
         host: str,
         port: int,
         address: int = 0x00,
-        timeout: float = 8.0,
+        timeout: float = 15.0,
     ) -> None:
         """Initialise the client."""
         self.host = host

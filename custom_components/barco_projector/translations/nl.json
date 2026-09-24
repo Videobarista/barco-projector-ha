@@ -111,29 +111,29 @@
       }
     },
     "button": {
-      "focus_near": {
-        "name": "Focus dichterbij"
+      "lens_focus_near": {
+        "name": "Lens focus dichterbij"
       },
-      "focus_far": {
-        "name": "Focus verder weg"
+      "lens_focus_far": {
+        "name": "Lens focus verder weg"
       },
-      "zoom_in": {
-        "name": "Inzoomen"
+      "lens_zoom_in": {
+        "name": "Lens inzoomen"
       },
-      "zoom_out": {
-        "name": "Uitzoomen"
+      "lens_zoom_out": {
+        "name": "Lens uitzoomen"
       },
-      "shift_up": {
-        "name": "Shift omhoog"
+      "lens_shift_up": {
+        "name": "Lens shift omhoog"
       },
-      "shift_down": {
-        "name": "Shift omlaag"
+      "lens_shift_down": {
+        "name": "Lens shift omlaag"
       },
-      "shift_left": {
-        "name": "Shift naar links"
+      "lens_shift_left": {
+        "name": "Lens shift naar links"
       },
-      "shift_right": {
-        "name": "Shift naar rechts"
+      "lens_shift_right": {
+        "name": "Lens shift naar rechts"
       },
       "icmp_play_scheduled_show": {
         "name": "Geplande show starten"
@@ -155,6 +155,11 @@
       },
       "icmp_clear": {
         "name": "Leegmaken"
+      }
+    },
+    "select": {
+      "macro": {
+        "name": "Macro"
       }
     }
   },

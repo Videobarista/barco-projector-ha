@@ -111,29 +111,29 @@
       }
     },
     "button": {
-      "focus_near": {
-        "name": "Focus near"
+      "lens_focus_near": {
+        "name": "Lens focus near"
       },
-      "focus_far": {
-        "name": "Focus far"
+      "lens_focus_far": {
+        "name": "Lens focus far"
       },
-      "zoom_in": {
-        "name": "Zoom in"
+      "lens_zoom_in": {
+        "name": "Lens zoom in"
       },
-      "zoom_out": {
-        "name": "Zoom out"
+      "lens_zoom_out": {
+        "name": "Lens zoom out"
       },
-      "shift_up": {
-        "name": "Shift up"
+      "lens_shift_up": {
+        "name": "Lens shift up"
       },
-      "shift_down": {
-        "name": "Shift down"
+      "lens_shift_down": {
+        "name": "Lens shift down"
       },
-      "shift_left": {
-        "name": "Shift left"
+      "lens_shift_left": {
+        "name": "Lens shift left"
       },
-      "shift_right": {
-        "name": "Shift right"
+      "lens_shift_right": {
+        "name": "Lens shift right"
       },
       "icmp_play_scheduled_show": {
         "name": "Play scheduled show"
@@ -155,6 +155,11 @@
       },
       "icmp_clear": {
         "name": "Clear"
+      }
+    },
+    "select": {
+      "macro": {
+        "name": "Macro"
       }
     }
   },

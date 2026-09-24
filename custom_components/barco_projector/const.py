@@ -7,6 +7,8 @@ from typing import Final
 DOMAIN: Final = "barco_projector"
 
 MANUFACTURER: Final = "Barco"
+PROJECTOR_MODEL: Final = "Digital cinema projector"
+MEDIA_BLOCK_MODEL: Final = "ICMP / ICMP-X"
 
 # Barco LCD/DLP protocol (projector control)
 CONF_SERIES: Final = "series"

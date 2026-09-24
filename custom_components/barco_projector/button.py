@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from homeassistant.components.button import ButtonEntity
-from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -26,15 +25,22 @@ from .protocol import (
     BarcoError,
 )
 
+# The translation keys start with "lens_" so the buttons sort together on the
+# device page, which groups entities by category and then by name.
 LENS_BUTTONS: tuple[tuple[str, bytes, int, str], ...] = (
-    ("focus_near", CMD_LENS_FOCUS, LENS_FOCUS_NEAR, "mdi:image-filter-center-focus"),
-    ("focus_far", CMD_LENS_FOCUS, LENS_FOCUS_FAR, "mdi:image-filter-center-focus"),
-    ("zoom_in", CMD_LENS_ZOOM, LENS_ZOOM_IN, "mdi:magnify-plus"),
-    ("zoom_out", CMD_LENS_ZOOM, LENS_ZOOM_OUT, "mdi:magnify-minus"),
-    ("shift_up", CMD_LENS_SHIFT, LENS_SHIFT_UP, "mdi:arrow-up"),
-    ("shift_down", CMD_LENS_SHIFT, LENS_SHIFT_DOWN, "mdi:arrow-down"),
-    ("shift_left", CMD_LENS_SHIFT, LENS_SHIFT_LEFT, "mdi:arrow-left"),
-    ("shift_right", CMD_LENS_SHIFT, LENS_SHIFT_RIGHT, "mdi:arrow-right"),
+    (
+        "lens_focus_near",
+        CMD_LENS_FOCUS,
+        LENS_FOCUS_NEAR,
+        "mdi:image-filter-center-focus",
+    ),
+    ("lens_focus_far", CMD_LENS_FOCUS, LENS_FOCUS_FAR, "mdi:image-filter-center-focus"),
+    ("lens_zoom_in", CMD_LENS_ZOOM, LENS_ZOOM_IN, "mdi:magnify-plus"),
+    ("lens_zoom_out", CMD_LENS_ZOOM, LENS_ZOOM_OUT, "mdi:magnify-minus"),
+    ("lens_shift_up", CMD_LENS_SHIFT, LENS_SHIFT_UP, "mdi:arrow-up"),
+    ("lens_shift_down", CMD_LENS_SHIFT, LENS_SHIFT_DOWN, "mdi:arrow-down"),
+    ("lens_shift_left", CMD_LENS_SHIFT, LENS_SHIFT_LEFT, "mdi:arrow-left"),
+    ("lens_shift_right", CMD_LENS_SHIFT, LENS_SHIFT_RIGHT, "mdi:arrow-right"),
 )
 
 ICMP_BUTTONS: tuple[tuple[str, str, str], ...] = (
@@ -69,9 +75,6 @@ async def async_setup_entry(
 
 class BarcoLensButton(BarcoProjectorEntity, ButtonEntity):
     """One step of lens focus, zoom or shift."""
-
-    _attr_entity_category = EntityCategory.CONFIG
-    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator, entry, key, command, direction, icon) -> None:
         """Initialise the lens button."""

@@ -187,18 +187,32 @@ class BarcoOptionsFlow(OptionsFlow):
         """Manage the options."""
         current = {**self.config_entry.data, **self.config_entry.options}
 
+        errors: dict[str, str] = {}
         if user_input is not None:
-            options = {
-                CONF_SCAN_INTERVAL_SECONDS: int(
-                    user_input[CONF_SCAN_INTERVAL_SECONDS]
-                ),
-                CONF_MEDIA_BLOCK: user_input[CONF_MEDIA_BLOCK],
-                CONF_MEDIA_BLOCK_HOST: (
-                    user_input.get(CONF_MEDIA_BLOCK_HOST) or ""
-                ).strip(),
-                CONF_MEDIA_BLOCK_PORT: int(user_input[CONF_MEDIA_BLOCK_PORT]),
-            }
-            return self.async_create_entry(data=options)
+            media_block = user_input[CONF_MEDIA_BLOCK]
+            icmp_host = (user_input.get(CONF_MEDIA_BLOCK_HOST) or "").strip()
+            icmp_port = int(user_input[CONF_MEDIA_BLOCK_PORT])
+
+            error = None
+            if media_block == MEDIA_BLOCK_ICMP:
+                # Not every projector holds an ICMP, so check before saving
+                # instead of creating entities that can only fail.
+                error = await _async_test_icmp(
+                    icmp_host or current[CONF_HOST], icmp_port
+                )
+            if error:
+                errors["base"] = error
+            else:
+                return self.async_create_entry(
+                    data={
+                        CONF_SCAN_INTERVAL_SECONDS: int(
+                            user_input[CONF_SCAN_INTERVAL_SECONDS]
+                        ),
+                        CONF_MEDIA_BLOCK: media_block,
+                        CONF_MEDIA_BLOCK_HOST: icmp_host,
+                        CONF_MEDIA_BLOCK_PORT: icmp_port,
+                    }
+                )
 
         schema = vol.Schema(
             {
@@ -236,4 +250,6 @@ class BarcoOptionsFlow(OptionsFlow):
                 ): PORT_SELECTOR,
             }
         )
-        return self.async_show_form(step_id="init", data_schema=schema)
+        return self.async_show_form(
+            step_id="init", data_schema=schema, errors=errors
+        )

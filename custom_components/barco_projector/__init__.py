@@ -8,6 +8,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 
 from .const import (
     CONF_MEDIA_BLOCK,
@@ -21,6 +22,7 @@ from .const import (
     MEDIA_BLOCK_NONE,
 )
 from .coordinator import BarcoCoordinator
+from .entity import projector_device_info
 from .icmp import IcmpClient
 from .protocol import BarcoClient, BarcoProjector
 
@@ -30,6 +32,7 @@ PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
     Platform.MEDIA_PLAYER,
+    Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
 ]
@@ -41,6 +44,7 @@ class BarcoRuntimeData:
 
     coordinator: BarcoCoordinator
     icmp: IcmpClient | None
+    projector_device_id: str | None = None
 
 
 type BarcoConfigEntry = ConfigEntry[BarcoRuntimeData]
@@ -71,6 +75,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: BarcoConfigEntry) -> boo
         )
 
     entry.runtime_data = BarcoRuntimeData(coordinator=coordinator, icmp=icmp)
+
+    # Register the projector before the platforms add entities, so the media
+    # block can be linked to it by device id.
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id, **projector_device_info(entry)
+    )
+    entry.runtime_data.projector_device_id = device.id
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))

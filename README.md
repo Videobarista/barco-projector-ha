@@ -38,6 +38,7 @@ Worth being precise about, because the two protocols are not equal:
 | Entity | Type | Notes |
 | --- | --- | --- |
 | Projector | `media_player` | On/off switches the light source; the source list holds the macros bound to the keypad buttons |
+| Macro | `select` | Dropdown with every macro on the keypad; picking one runs it |
 | Dowser | `switch` | On means open |
 | Sleep mode | `switch` | Only on models that support it (DP2K-10S / 10Sx); unavailable otherwise |
 | Lamp | `binary_sensor` | Light source running |
@@ -46,7 +47,7 @@ Worth being precise about, because the two protocols are not equal:
 | Dowser position | `sensor` | `closed`, `open` or `undetermined` |
 | Errors, Warnings, Notifications | `sensor` | Series 2 only |
 | Last seen | `sensor` | Timestamp of the last successful poll |
-| Lens focus / zoom / shift | `button` | Eight buttons, **disabled by default** - enable them in the entity settings |
+| Lens focus / zoom / shift | `button` | Eight buttons, one step per press |
 
 **ICMP - Automation over IP, TCP 43748**
 
@@ -55,6 +56,14 @@ Worth being precise about, because the two protocols are not equal:
 | ICMP | `media_player` | Play, pause, resume, stop, next, previous |
 | Schedule, Repeat | `switch` | |
 | Play scheduled show, Emergency stop, Jump to clip end, Recover, Recover and play, Ignore recovery, Clear | `button` | |
+
+## Switching inputs and formats
+
+The Barco protocol has no command to select an input or an aspect ratio. Source, format,
+lens position and processing all live inside a macro, which is why the integration reads the
+macros off the keypad and offers them as a dropdown. Running the macro that belongs to an
+input is how you switch to HDMI, DVI, SDI or the media block. Which macros exist depends
+entirely on how the projector was commissioned; nothing about them is standardised.
 
 ## Services
 
@@ -97,6 +106,8 @@ folder and restart.
   dowser command the integration re-polls at 2, 10, 30 and 60 seconds.
 - Series 2 projectors close an idle socket after 15 minutes. The client reconnects
   transparently, so keep the poll interval well below that.
+- A projector stops answering for several seconds while the lamp ignites. The read timeout
+  is 15 seconds and a timed-out request is retried once on a fresh connection.
 - Barco's documentation contains one example frame with a miscalculated checksum (lamp write
   on, where the projector address is left out of the sum). The implementation follows the
   documented formula; incoming frames with a bad checksum are logged, not discarded.
