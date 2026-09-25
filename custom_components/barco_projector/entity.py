@@ -57,7 +57,7 @@ class BarcoProjectorEntity(CoordinatorEntity[BarcoCoordinator]):
     @property
     def available(self) -> bool:
         """Return whether the projector answered the last poll."""
-        return self.coordinator.last_update_success
+        return self.coordinator.last_update_success and self.coordinator.data.reachable
 
 
 class BarcoMediaBlockEntity(Entity):

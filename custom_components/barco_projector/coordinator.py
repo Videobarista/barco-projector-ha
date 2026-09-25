@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import logging
+from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -26,6 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 class BarcoData:
     """Snapshot of everything we poll from the projector."""
 
+    reachable: bool = True
     lamp: bool | None = None
     shutter: int | None = None
     last_macro: str | None = None
@@ -59,22 +62,38 @@ class BarcoCoordinator(DataUpdateCoordinator[BarcoData]):
         self._poll_count = 0
         self._macros: list[str] = []
         self._last_seen: datetime | None = None
+        self._reachable = True
 
     async def async_shutdown(self) -> None:
         """Close the socket when the entry is unloaded."""
         await super().async_shutdown()
         await self.projector.async_close()
 
+    @property
+    def last_seen(self) -> datetime | None:
+        """Return when the projector last answered."""
+        return self._last_seen
+
     async def _async_update_data(self) -> BarcoData:
-        data = BarcoData()
+        """Poll the projector, treating an unreachable one as a normal state.
+
+        A projector that is switched off at the wall stops answering, which is
+        expected rather than an error. Raising here would put a red line in the
+        log on every power cycle, so the unreachable state is carried in the
+        data instead and the entities go unavailable.
+        """
         try:
-            data.lamp = await self.projector.async_get_lamp()
-            data.shutter = await self.projector.async_get_shutter()
+            return await self._async_poll()
         except BarcoConnectionError as err:
-            raise UpdateFailed(str(err)) from err
+            return self._async_unreachable(err)
         except BarcoError as err:
+            # A malformed answer is a real anomaly, so this one does get logged.
             raise UpdateFailed(f"unexpected answer: {err}") from err
 
+    async def _async_poll(self) -> BarcoData:
+        data = BarcoData()
+        data.lamp = await self.projector.async_get_lamp()
+        data.shutter = await self.projector.async_get_shutter()
         data.last_macro = await self._optional("last_macro", self._read_last_macro)
         counts = await self._optional("errors", self.projector.async_get_error_counts)
         if counts is not None:
@@ -90,12 +109,27 @@ class BarcoCoordinator(DataUpdateCoordinator[BarcoData]):
         self._poll_count += 1
         self._last_seen = dt_util.utcnow()
         data.last_seen = self._last_seen
+        if not self._reachable:
+            _LOGGER.info("%s is answering again", self.name)
+            self._reachable = True
         return data
 
-    @property
-    def last_seen(self) -> datetime | None:
-        """Return when the projector last answered."""
-        return self._last_seen
+    def _async_unreachable(self, err: Exception) -> BarcoData:
+        """Return an unreachable snapshot, keeping what we already knew."""
+        if self._reachable:
+            _LOGGER.info(
+                "%s is not answering, entities are unavailable until it returns: %s",
+                self.name,
+                err,
+            )
+        else:
+            _LOGGER.debug("%s is still not answering: %s", self.name, err)
+        self._reachable = False
+        return BarcoData(
+            reachable=False,
+            macros=list(self._macros),
+            last_seen=self._last_seen,
+        )
 
     async def _read_last_macro(self) -> str | None:
         return await self.projector.async_get_last_macro()
@@ -103,7 +137,7 @@ class BarcoCoordinator(DataUpdateCoordinator[BarcoData]):
     async def _read_macros(self) -> list[str]:
         return await self.projector.async_get_macro_buttons(MAX_MACRO_BUTTONS)
 
-    async def _optional(self, key, func):
+    async def _optional(self, key: str, func: Callable) -> Any:
         """Run a command that not every model supports."""
         if key in self.unsupported:
             return None
@@ -113,5 +147,3 @@ class BarcoCoordinator(DataUpdateCoordinator[BarcoData]):
             _LOGGER.debug("%s is not supported by this projector: %s", key, err)
             self.unsupported.add(key)
             return None
-        except BarcoConnectionError as err:
-            raise UpdateFailed(str(err)) from err

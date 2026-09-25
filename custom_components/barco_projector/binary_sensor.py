@@ -66,5 +66,5 @@ class BarcoConnectivitySensor(BarcoProjectorEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        """Return True while the last poll succeeded."""
-        return self.coordinator.last_update_success
+        """Return True while the projector is answering."""
+        return self.coordinator.last_update_success and self.coordinator.data.reachable

@@ -34,6 +34,18 @@ Worth being precise about, because the two protocols are not equal:
   therefore optimistic: they show what was last sent. Acknowledgement is enabled on the
   socket, but an ACK only confirms that a command was parsed.
 
+## When the projector is switched off
+
+A projector that is powered down stops answering, which is expected rather than an error.
+The integration treats it as a normal state: the entities go unavailable, the connectivity
+sensor goes off, and "Last seen" keeps the timestamp of the last answer. One line at info
+level is logged when it stops answering and one when it returns, so a power cycle does not
+fill the log with errors.
+
+The entities go *unavailable*, not *off*. Losing contact says nothing about the lamp: a
+switch reboot looks exactly the same as a projector at the wall socket, so the integration
+does not guess.
+
 ## Entities
 
 **Projector - Barco LCD/DLP protocol, TCP 43728 (series 2) or 43680 (series 1)**
