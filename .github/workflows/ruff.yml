@@ -15,10 +15,18 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
-      # Run Ruff directly instead of through an action: the action still ships a
-      # Node 20 entrypoint, and a pinned version keeps the badge stable when new
-      # rules are released.
-      - name: Run Ruff
-        run: pipx run ruff==0.16.8 check --output-format github .
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install Ruff
+        run: pip install ruff==0.16.8
+
+      - name: Ruff check
+        run: ruff check --output-format github .
+
+      - name: Ruff format
+        run: ruff format --check --diff .

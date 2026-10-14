@@ -17,12 +17,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Run HACS validation
         uses: hacs/action@main
         with:
           category: integration
-          # This integration is published as a custom repository only, so it is
-          # not present in the home-assistant/brands repository.
-          ignore: brands
