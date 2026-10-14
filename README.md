@@ -1,15 +1,19 @@
 # Barco Cinema Projector for Home Assistant
 
-[![Ruff](https://github.com/Videobarista/barco-projector-ha/actions/workflows/ruff.yml/badge.svg)](https://github.com/Videobarista/barco-projector-ha/actions/workflows/ruff.yml)
-[![HACS](https://github.com/Videobarista/barco-projector-ha/actions/workflows/hacs.yml/badge.svg)](https://github.com/Videobarista/barco-projector-ha/actions/workflows/hacs.yml)
-[![Hassfest](https://github.com/Videobarista/barco-projector-ha/actions/workflows/hassfest.yml/badge.svg)](https://github.com/Videobarista/barco-projector-ha/actions/workflows/hassfest.yml)
-[![CodeQL](https://github.com/Videobarista/barco-projector-ha/actions/workflows/codeql.yml/badge.svg)](https://github.com/Videobarista/barco-projector-ha/actions/workflows/codeql.yml)
-[![HACS: Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.12%2B-41BDF5.svg)](https://www.home-assistant.io)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Hassfest](https://github.com/Videobarista/barco-projector-ha/actions/workflows/hassfest.yml/badge.svg?branch=main)](https://github.com/Videobarista/barco-projector-ha/actions/workflows/hassfest.yml)
+[![HACS validation](https://github.com/Videobarista/barco-projector-ha/actions/workflows/hacs.yml/badge.svg?branch=main)](https://github.com/Videobarista/barco-projector-ha/actions/workflows/hacs.yml)
+[![CodeQL](https://github.com/Videobarista/barco-projector-ha/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/Videobarista/barco-projector-ha/actions/workflows/codeql.yml)
+[![Ruff](https://github.com/Videobarista/barco-projector-ha/actions/workflows/ruff.yml/badge.svg?branch=main)](https://github.com/Videobarista/barco-projector-ha/actions/workflows/ruff.yml)
+[![Tests](https://github.com/Videobarista/barco-projector-ha/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Videobarista/barco-projector-ha/actions/workflows/tests.yml)
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Videobarista&repository=barco-projector-ha&category=integration)
+
+[![HACS custom](https://img.shields.io/badge/HACS-custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
+[![Quality scale: Bronze (aligned)](https://img.shields.io/badge/quality%20scale-bronze%20(aligned)-cd7f32.svg)](https://developers.home-assistant.io/docs/core/integration-quality-scale/)
+[![Home Assistant 2025.10+](https://img.shields.io/badge/Home%20Assistant-2025.10%2B-41BDF5.svg)](https://www.home-assistant.io)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Release](https://img.shields.io/github/v/release/Videobarista/barco-projector-ha?display_name=tag)](https://github.com/Videobarista/barco-projector-ha/releases)
 
 Control a Barco digital cinema projector (DP2K, DP4K, and the older DP series) from Home
 Assistant over the network, without Communicator or any cloud service.
@@ -41,6 +45,11 @@ The integration treats it as a normal state: the entities go unavailable, the co
 sensor goes off, and "Last seen" keeps the timestamp of the last answer. One line at info
 level is logged when it stops answering and one when it returns, so a power cycle does not
 fill the log with errors.
+
+The integration remembers what the projector reported: its macros and which optional
+commands it answers. A Home Assistant restart while the projector is off therefore sets it up
+from that memory, with the same entities as before. Only a projector that has never answered
+keeps the entry waiting until it does.
 
 The entities go *unavailable*, not *off*. Losing contact says nothing about the lamp: a
 switch reboot looks exactly the same as a projector at the wall socket, so the integration
@@ -80,15 +89,44 @@ macros off the keypad and offers them as a dropdown. Running the macro that belo
 input is how you switch to HDMI, DVI, SDI or the media block. Which macros exist depends
 entirely on how the projector was commissioned; nothing about them is standardised.
 
-## Services
+## Actions
 
-| Service | Target | What it does |
+All actions target a media player of this integration. The projector actions go to the
+projector's media player, the ICMP actions to the ICMP media player; sending one to the other
+raises an error that says so.
+
+| Action | Target | What it does |
 | --- | --- | --- |
-| `barco_projector.execute_macro` | projector or ICMP media player | Runs a macro by name |
-| `barco_projector.send_raw` | projector media player | Sends any Barco command as hex; framing, escaping and checksum are handled |
-| `barco_projector.send_automation` | ICMP media player | Sends a raw automation command, e.g. `PLAYER.Pause (seconds),10` |
-| `barco_projector.gpio_pulse` | ICMP media player | Pulses a GPIO output |
-| `barco_projector.gpio_set` | ICMP media player | Sets GPIO outputs, e.g. `1=Up,2=Down` |
+| `barco_projector.execute_macro` | projector or ICMP media player | Runs a macro by name. Through the ICMP it is relayed to the projector. |
+| `barco_projector.send_raw` | projector media player | Sends any Barco command; framing, escaping and checksum are handled. |
+| `barco_projector.send_automation` | ICMP media player | Sends a raw Automation over IP command. |
+| `barco_projector.gpio_pulse` | ICMP media player | Pulses one of the ICMP GPIO outputs. |
+| `barco_projector.gpio_set` | ICMP media player | Sets one or more ICMP GPIO outputs. |
+
+| Action | Field | Required | Description |
+| --- | --- | --- | --- |
+| `execute_macro` | `macro` | yes | Macro name, exactly as stored on the projector, e.g. `2D_FLAT`. |
+| `send_raw` | `command` | yes | Command bytes as hex, e.g. `76 9a`, `0x761a` or `\x76\x1a`. |
+| `send_raw` | `data` | no | Data bytes as hex, e.g. `01`. |
+| `send_automation` | `command` | yes | For example `PLAYER.Pause (seconds),10`; the closing `;` is added for you. |
+| `gpio_pulse` | `output` | yes | Output number, 1 to 8. |
+| `gpio_pulse` | `duration` | no | Pulse length in milliseconds, 1 to 60000. Default 500. |
+| `gpio_pulse` | `direction` | no | `up` or `down`. Default `up`. |
+| `gpio_set` | `mask` | yes | Outputs and states, e.g. `1=Up,2=Down,3=Down`. |
+
+Example: switch to a format and open the dowser.
+
+```yaml
+actions:
+  - action: barco_projector.execute_macro
+    target:
+      entity_id: media_player.dp2k_6e
+    data:
+      macro: "DCI 239"
+  - action: switch.turn_on
+    target:
+      entity_id: switch.dp2k_6e_dowser
+```
 
 ## Installation
 
@@ -136,6 +174,18 @@ integration options and saving.
   on, where the projector address is left out of the sum). The implementation follows the
   documented formula; incoming frames with a bad checksum are logged, not discarded.
 
+## Removal
+
+1. Go to **Settings -> Devices & services** and open **Barco Cinema Projector**.
+2. Open the menu (three dots) next to the projector entry and choose **Delete**. What the
+   integration remembered about the projector is deleted with it.
+3. To remove the files as well: in HACS, open **Barco Cinema Projector** and choose
+   **Remove**, or delete `custom_components/barco_projector` for a manual installation.
+   Restart Home Assistant afterwards.
+
+Nothing is changed on the projector itself: macros, keypad bindings and settings stay as
+they are.
+
 ## Branding
 
 Barco logos are not included: the manufacturer holds the rights to them and has not released
@@ -143,8 +193,23 @@ them for third-party use. The icon in `custom_components/barco_projector/brand/`
 generic, self-drawn projector symbol. See [Brand/](Brand/) if you have artwork you are
 allowed to distribute.
 
-Because this integration is published as a custom repository, it is not present in the
-`home-assistant/brands` repository, so the HACS workflow runs with `ignore: brands`.
+## Quality scale
+
+This integration is aligned with the **Bronze** tier of the
+[Home Assistant integration quality scale](https://developers.home-assistant.io/docs/core/integration-quality-scale/).
+Home Assistant only grades integrations that ship with Home Assistant itself, so this is a
+self-assessment, not an official rating. The status per rule is recorded in
+[`quality_scale.yaml`](custom_components/barco_projector/quality_scale.yaml).
+
+## Development
+
+The tests use [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component)
+and run on every push. To run them locally (Python 3.14):
+
+```bash
+pip install -r requirements_test.txt
+pytest --cov --cov-report=term-missing
+```
 
 ## License
 

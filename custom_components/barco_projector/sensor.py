@@ -17,7 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import BarcoConfigEntry
-from .const import SHUTTER_STATES
+from .const import CAPABILITY_ERRORS, CAPABILITY_LAST_MACRO, SHUTTER_STATES
 from .coordinator import BarcoCoordinator, BarcoData
 from .entity import BarcoProjectorEntity
 
@@ -36,7 +36,7 @@ SENSORS: tuple[BarcoSensorDescription, ...] = (
         translation_key="last_macro",
         icon="mdi:script-text-play",
         value_fn=lambda data: data.last_macro,
-        supported_key="last_macro",
+        supported_key=CAPABILITY_LAST_MACRO,
     ),
     BarcoSensorDescription(
         key="dowser_state",
@@ -45,9 +45,9 @@ SENSORS: tuple[BarcoSensorDescription, ...] = (
         device_class=SensorDeviceClass.ENUM,
         options=list(SHUTTER_STATES.values()),
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda data: SHUTTER_STATES.get(data.shutter)
-        if data.shutter is not None
-        else None,
+        value_fn=lambda data: (
+            SHUTTER_STATES.get(data.shutter) if data.shutter is not None else None
+        ),
     ),
     BarcoSensorDescription(
         key="errors",
@@ -56,7 +56,7 @@ SENSORS: tuple[BarcoSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda data: data.errors,
-        supported_key="errors",
+        supported_key=CAPABILITY_ERRORS,
     ),
     BarcoSensorDescription(
         key="warnings",
@@ -65,7 +65,7 @@ SENSORS: tuple[BarcoSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda data: data.warnings,
-        supported_key="errors",
+        supported_key=CAPABILITY_ERRORS,
     ),
     BarcoSensorDescription(
         key="notifications",
@@ -74,7 +74,7 @@ SENSORS: tuple[BarcoSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda data: data.notifications,
-        supported_key="errors",
+        supported_key=CAPABILITY_ERRORS,
     ),
 )
 

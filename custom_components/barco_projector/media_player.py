@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import logging
 
-import voluptuous as vol
-
 from homeassistant.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
@@ -14,32 +12,14 @@ from homeassistant.components.media_player import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_call_later
 
 from . import BarcoConfigEntry
-from .const import (
-    ATTR_COMMAND,
-    ATTR_DATA,
-    ATTR_DIRECTION,
-    ATTR_DURATION,
-    ATTR_MACRO,
-    ATTR_MASK,
-    ATTR_OUTPUT,
-    SERVICE_EXECUTE_MACRO,
-    SERVICE_GPIO_PULSE,
-    SERVICE_GPIO_SET,
-    SERVICE_SEND_AUTOMATION,
-    SERVICE_SEND_RAW,
-)
 from .entity import BarcoMediaBlockEntity, BarcoProjectorEntity
 from .icmp import IcmpError, quote
 from .protocol import BarcoError
 
 _LOGGER = logging.getLogger(__name__)
-
-REFRESH_DELAYS = (2, 10, 30, 60)
 
 
 def _hex_to_bytes(value: str) -> bytes:
@@ -61,48 +41,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up the media players."""
     data = entry.runtime_data
-    entities: list[MediaPlayerEntity] = [
-        BarcoProjectorMediaPlayer(data.coordinator, entry)
-    ]
+    entities: list[MediaPlayerEntity] = [BarcoProjectorMediaPlayer(data.coordinator, entry)]
     if data.icmp is not None:
         entities.append(BarcoIcmpMediaPlayer(data.icmp, entry))
     async_add_entities(entities)
-
-    platform = entity_platform.async_get_current_platform()
-    platform.async_register_entity_service(
-        SERVICE_EXECUTE_MACRO,
-        {vol.Required(ATTR_MACRO): cv.string},
-        "async_execute_macro",
-    )
-    platform.async_register_entity_service(
-        SERVICE_SEND_RAW,
-        {
-            vol.Required(ATTR_COMMAND): cv.string,
-            vol.Optional(ATTR_DATA, default=""): cv.string,
-        },
-        "async_send_raw",
-    )
-    platform.async_register_entity_service(
-        SERVICE_SEND_AUTOMATION,
-        {vol.Required(ATTR_COMMAND): cv.string},
-        "async_send_automation",
-    )
-    platform.async_register_entity_service(
-        SERVICE_GPIO_PULSE,
-        {
-            vol.Required(ATTR_OUTPUT): vol.All(vol.Coerce(int), vol.Range(min=1, max=8)),
-            vol.Optional(ATTR_DURATION, default=500): vol.All(
-                vol.Coerce(int), vol.Range(min=1, max=60000)
-            ),
-            vol.Optional(ATTR_DIRECTION, default="up"): vol.In(["up", "down"]),
-        },
-        "async_gpio_pulse",
-    )
-    platform.async_register_entity_service(
-        SERVICE_GPIO_SET,
-        {vol.Required(ATTR_MASK): cv.string},
-        "async_gpio_set",
-    )
 
 
 class BarcoProjectorMediaPlayer(BarcoProjectorEntity, MediaPlayerEntity):
@@ -156,7 +98,7 @@ class BarcoProjectorMediaPlayer(BarcoProjectorEntity, MediaPlayerEntity):
             await self.coordinator.projector.async_set_lamp(True)
         except BarcoError as err:
             raise HomeAssistantError(f"Turning the projector on failed: {err}") from err
-        self._schedule_refresh()
+        self.coordinator.async_schedule_followups()
 
     async def async_turn_off(self) -> None:
         """Extinguish the light source."""
@@ -164,7 +106,7 @@ class BarcoProjectorMediaPlayer(BarcoProjectorEntity, MediaPlayerEntity):
             await self.coordinator.projector.async_set_lamp(False)
         except BarcoError as err:
             raise HomeAssistantError(f"Turning the projector off failed: {err}") from err
-        self._schedule_refresh()
+        self.coordinator.async_schedule_followups()
 
     async def async_select_source(self, source: str) -> None:
         """Execute the macro with this name."""
@@ -176,7 +118,7 @@ class BarcoProjectorMediaPlayer(BarcoProjectorEntity, MediaPlayerEntity):
             await self.coordinator.projector.async_execute_macro(macro)
         except BarcoError as err:
             raise HomeAssistantError(f"Macro '{macro}' failed: {err}") from err
-        self._schedule_refresh()
+        self.coordinator.async_schedule_followups()
 
     async def async_send_raw(self, command: str, data: str = "") -> None:
         """Send an arbitrary Barco command (service)."""
@@ -188,13 +130,11 @@ class BarcoProjectorMediaPlayer(BarcoProjectorEntity, MediaPlayerEntity):
             await self.coordinator.projector.async_send_raw(command_bytes, data_bytes)
         except BarcoError as err:
             raise HomeAssistantError(f"Raw command failed: {err}") from err
-        self._schedule_refresh()
+        self.coordinator.async_schedule_followups()
 
     async def async_send_automation(self, command: str) -> None:
         """Reject automation commands on the projector entity."""
-        raise HomeAssistantError(
-            "send_automation only works on the ICMP media player entity"
-        )
+        raise HomeAssistantError("send_automation only works on the ICMP media player entity")
 
     async def async_gpio_pulse(self, output: int, duration: int, direction: str) -> None:
         """Reject GPIO commands on the projector entity."""
@@ -203,14 +143,6 @@ class BarcoProjectorMediaPlayer(BarcoProjectorEntity, MediaPlayerEntity):
     async def async_gpio_set(self, mask: str) -> None:
         """Reject GPIO commands on the projector entity."""
         raise HomeAssistantError("GPIO services only work on the ICMP entity")
-
-    def _schedule_refresh(self) -> None:
-        """Poll again shortly; lamp and dowser need seconds to settle."""
-        for delay in REFRESH_DELAYS:
-            async_call_later(self.hass, delay, self._delayed_refresh)
-
-    async def _delayed_refresh(self, _now) -> None:
-        await self.coordinator.async_request_refresh()
 
 
 class BarcoIcmpMediaPlayer(BarcoMediaBlockEntity, MediaPlayerEntity):

@@ -42,9 +42,7 @@ def quote(value: str) -> str:
 class IcmpClient:
     """Maintain a TCP connection to the ICMP automation server."""
 
-    def __init__(
-        self, host: str, port: int, timeout: float = 6.0, use_ack: bool = True
-    ) -> None:
+    def __init__(self, host: str, port: int, timeout: float = 6.0, use_ack: bool = True) -> None:
         """Initialise the client."""
         self.host = host
         self.port = port
@@ -78,9 +76,7 @@ class IcmpClient:
             )
         except (OSError, TimeoutError) as err:
             self._reader = self._writer = None
-            raise IcmpConnectionError(
-                f"cannot connect to {self.host}:{self.port}: {err}"
-            ) from err
+            raise IcmpConnectionError(f"cannot connect to {self.host}:{self.port}: {err}") from err
         if self.use_ack:
             # The server may fall back to its default when a socket is reset.
             await self._write("ACK,1;")

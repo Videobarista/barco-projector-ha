@@ -6,6 +6,9 @@
         "description": "These projectors answered the discovery broadcast. Pick one, or choose the last option to enter an address yourself.",
         "data": {
           "device": "Projector"
+        },
+        "data_description": {
+          "device": "Projectors that answered the discovery broadcast on this network, with their model and address."
         }
       },
       "manual": {
@@ -18,6 +21,9 @@
           "media_block": "Media block"
         },
         "data_description": {
+          "name": "Name for the device in Home Assistant, for example the screen it projects on.",
+          "host": "IP address or hostname of the projector controller. On series 1 projectors use the main controller, not the Texas Instruments front end.",
+          "port": "Barco control port: 43728 for series 2 (DP2K, DP4K), 43680 for series 1.",
           "media_block": "Choose ICMP when a Barco ICMP or ICMP-X is installed and you want player control as well."
         }
       },
@@ -27,6 +33,10 @@
         "data": {
           "media_block_host": "ICMP host",
           "media_block_port": "ICMP port"
+        },
+        "data_description": {
+          "media_block_host": "Leave empty to use the projector address, or enter the address of one of the ICMP LAN ports.",
+          "media_block_port": "Automation over IP port, 43748 unless it was changed on the ICMP."
         }
       }
     },
@@ -50,7 +60,9 @@
         },
         "data_description": {
           "scan_interval_seconds": "The Barco protocol is blocking, so keep this at 10 seconds or more.",
-          "media_block_host": "Leave empty to use the projector address."
+          "media_block": "Choose ICMP when a Barco ICMP or ICMP-X is installed and you want player control as well.",
+          "media_block_host": "Leave empty to use the projector address.",
+          "media_block_port": "Automation over IP port, 43748 unless it was changed on the ICMP."
         }
       }
     }

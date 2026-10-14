@@ -109,6 +109,4 @@ class IcmpActionButton(BarcoMediaBlockEntity, ButtonEntity):
         try:
             await self._icmp.async_player(self._action)
         except IcmpError as err:
-            raise HomeAssistantError(
-                f"ICMP command '{self._action}' failed: {err}"
-            ) from err
+            raise HomeAssistantError(f"ICMP command '{self._action}' failed: {err}") from err

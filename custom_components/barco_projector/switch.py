@@ -9,10 +9,9 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_call_later
 
 from . import BarcoConfigEntry
-from .const import SHUTTER_OPEN
+from .const import CAPABILITY_SLEEP, SHUTTER_OPEN
 from .entity import BarcoMediaBlockEntity, BarcoProjectorEntity
 from .icmp import IcmpError
 from .protocol import BarcoError
@@ -27,7 +26,7 @@ async def async_setup_entry(
     data = entry.runtime_data
     entities: list[SwitchEntity] = [BarcoDowserSwitch(data.coordinator, entry)]
 
-    if "sleep" not in data.coordinator.unsupported:
+    if CAPABILITY_SLEEP not in data.coordinator.unsupported:
         entities.append(BarcoSleepSwitch(data.coordinator, entry))
 
     if data.icmp is not None:
@@ -85,11 +84,7 @@ class BarcoDowserSwitch(BarcoProjectorEntity, SwitchEntity):
             await self.coordinator.projector.async_set_shutter(open_shutter)
         except BarcoError as err:
             raise HomeAssistantError(f"Setting the dowser failed: {err}") from err
-        await self.coordinator.async_request_refresh()
-        async_call_later(self.hass, 4, self._delayed_refresh)
-
-    async def _delayed_refresh(self, _now) -> None:
-        await self.coordinator.async_request_refresh()
+        self.coordinator.async_schedule_followups()
 
 
 class BarcoSleepSwitch(BarcoProjectorEntity, SwitchEntity):
@@ -107,7 +102,7 @@ class BarcoSleepSwitch(BarcoProjectorEntity, SwitchEntity):
     @property
     def available(self) -> bool:
         """Hide the switch when the projector does not answer the command."""
-        return super().available and "sleep" not in self.coordinator.unsupported
+        return super().available and CAPABILITY_SLEEP not in self.coordinator.unsupported
 
     @property
     def is_on(self) -> bool | None:
@@ -127,7 +122,7 @@ class BarcoSleepSwitch(BarcoProjectorEntity, SwitchEntity):
             await self.coordinator.projector.async_set_sleep(sleep)
         except BarcoError as err:
             raise HomeAssistantError(f"Setting sleep mode failed: {err}") from err
-        await self.coordinator.async_request_refresh()
+        self.coordinator.async_schedule_followups()
 
 
 class IcmpToggleSwitch(BarcoMediaBlockEntity, SwitchEntity):

@@ -6,13 +6,10 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_call_later
 
 from . import BarcoConfigEntry
 from .entity import BarcoProjectorEntity
 from .protocol import BarcoError
-
-REFRESH_DELAYS = (2, 10, 30)
 
 
 async def async_setup_entry(
@@ -60,8 +57,4 @@ class BarcoMacroSelect(BarcoProjectorEntity, SelectEntity):
             await self.coordinator.projector.async_execute_macro(option)
         except BarcoError as err:
             raise HomeAssistantError(f"Macro '{option}' failed: {err}") from err
-        for delay in REFRESH_DELAYS:
-            async_call_later(self.hass, delay, self._delayed_refresh)
-
-    async def _delayed_refresh(self, _now) -> None:
-        await self.coordinator.async_request_refresh()
+        self.coordinator.async_schedule_followups()

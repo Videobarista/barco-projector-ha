@@ -1,9 +1,20 @@
 # Brand
 
-This folder is here for artwork. Barco logos are not included: the manufacturer holds the
-rights to them and has not released them for third-party use.
+This folder is for logos and artwork supplied by users of this integration.
 
-The icon that ships with the integration lives in
-`custom_components/barco_projector/brand/` and is a generic, self-drawn projector symbol.
+The integration ships a plain, self-drawn projector icon in
+`custom_components/barco_projector/brand/`. That icon is deliberately generic: the Barco
+marks belong to Barco NV and are not redistributed here.
 
-If you have artwork you are allowed to distribute, drop it here and open a pull request.
+If you have the right to use the manufacturer's artwork and want it on your own
+installation, put your files in `custom_components/barco_projector/brand/`, replacing the
+ones there:
+
+| File | Size | Required |
+| --- | --- | --- |
+| `icon.png` | 256 x 256 | yes |
+| `icon@2x.png` | 512 x 512 | yes |
+| `logo.png` | any aspect ratio | no |
+| `logo@2x.png` | twice the `logo.png` dimensions | no |
+
+Pull requests with artwork you are allowed to distribute are welcome.

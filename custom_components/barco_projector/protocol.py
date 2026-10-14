@@ -196,9 +196,7 @@ class BarcoClient:
             )
         except (OSError, TimeoutError) as err:
             self._reader = self._writer = None
-            raise BarcoConnectionError(
-                f"cannot connect to {self.host}:{self.port}: {err}"
-            ) from err
+            raise BarcoConnectionError(f"cannot connect to {self.host}:{self.port}: {err}") from err
 
     async def _close(self) -> None:
         writer = self._writer
@@ -244,9 +242,7 @@ class BarcoClient:
                 f"communication with {self.host}:{self.port} failed: {last_error}"
             ) from last_error
 
-    async def _transact(
-        self, command: bytes, data: bytes, expect_answer: bool
-    ) -> bytes:
+    async def _transact(self, command: bytes, data: bytes, expect_answer: bool) -> bytes:
         if self._writer is None:
             raise BarcoConnectionError("not connected")
         frame = build_frame(self.address, command, data)
@@ -268,9 +264,7 @@ class BarcoClient:
     async def _read_frame(self) -> tuple[int, bytes]:
         if self._reader is None:
             raise BarcoConnectionError("not connected")
-        raw = await asyncio.wait_for(
-            self._reader.readuntil(bytes([STOP])), self.timeout
-        )
+        raw = await asyncio.wait_for(self._reader.readuntil(bytes([STOP])), self.timeout)
         _LOGGER.debug("RX %s", raw.hex(" "))
         return parse_frame(raw)
 
@@ -302,9 +296,7 @@ class BarcoProjector:
 
     async def async_set_lamp(self, turn_on: bool) -> None:
         """Switch the lamp on or off."""
-        await self.client.async_request(
-            CMD_LAMP_WRITE, bytes([0x01 if turn_on else 0x00])
-        )
+        await self.client.async_request(CMD_LAMP_WRITE, bytes([0x01 if turn_on else 0x00]))
 
     # --- dowser ----------------------------------------------------------
     async def async_get_shutter(self) -> int:
@@ -362,9 +354,7 @@ class BarcoProjector:
         answer = await self.client.async_request(CMD_ERRORS_READ, expect_answer=True)
         if len(answer) < 12:
             raise BarcoProtocolError("short error count answer")
-        values = [
-            int.from_bytes(answer[index : index + 4], "big") for index in (0, 4, 8)
-        ]
+        values = [int.from_bytes(answer[index : index + 4], "big") for index in (0, 4, 8)]
         return values[0], values[1], values[2]
 
     # --- sleep mode (DP2K-10S / 10Sx) ------------------------------------
@@ -389,9 +379,7 @@ class BarcoProjector:
         self, command: bytes, data: bytes = b"", *, expect_answer: bool = False
     ) -> bytes:
         """Send an arbitrary command; escaping and checksum are handled."""
-        return await self.client.async_request(
-            command, data, expect_answer=expect_answer
-        )
+        return await self.client.async_request(command, data, expect_answer=expect_answer)
 
 
 def _dedupe(names: list[str]) -> list[str]:

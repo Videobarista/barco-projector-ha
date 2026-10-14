@@ -39,7 +39,7 @@ def media_block_device_info(entry) -> DeviceInfo:
         if device_id:
             info["via_device_id"] = device_id
     else:
-        info["via_device"] = (DOMAIN, entry.entry_id)
+        info["via_device"] = (DOMAIN, entry.entry_id)  # type: ignore[typeddict-unknown-key]
     return info
 
 

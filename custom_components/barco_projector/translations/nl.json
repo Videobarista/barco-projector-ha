@@ -6,6 +6,9 @@
         "description": "Deze projectoren antwoordden op de zoekopdracht. Kies er een, of kies de laatste optie om zelf een adres in te vullen.",
         "data": {
           "device": "Projector"
+        },
+        "data_description": {
+          "device": "Projectoren die op dit netwerk op de zoekopdracht antwoordden, met model en adres."
         }
       },
       "manual": {
@@ -18,6 +21,9 @@
           "media_block": "Media block"
         },
         "data_description": {
+          "name": "Naam van het apparaat in Home Assistant, bijvoorbeeld de zaal of het doek.",
+          "host": "IP-adres of hostnaam van de projectorcontroller. Gebruik bij serie 1 de hoofdcontroller, niet de Texas Instruments-front-end.",
+          "port": "Barco-besturingspoort: 43728 voor serie 2 (DP2K, DP4K), 43680 voor serie 1.",
           "media_block": "Kies ICMP als er een Barco ICMP of ICMP-X in zit en je ook de speler wilt bedienen."
         }
       },
@@ -27,6 +33,10 @@
         "data": {
           "media_block_host": "ICMP-host",
           "media_block_port": "ICMP-poort"
+        },
+        "data_description": {
+          "media_block_host": "Leeg laten om het adres van de projector te gebruiken, of vul het adres van een LAN-poort van de ICMP in.",
+          "media_block_port": "Automation over IP-poort, 43748 tenzij die op de ICMP is aangepast."
         }
       }
     },
@@ -50,7 +60,9 @@
         },
         "data_description": {
           "scan_interval_seconds": "Het Barco-protocol is blokkerend, houd dit op 10 seconden of meer.",
-          "media_block_host": "Leeg laten om het adres van de projector te gebruiken."
+          "media_block": "Kies ICMP als er een Barco ICMP of ICMP-X in zit en je ook de speler wilt bedienen.",
+          "media_block_host": "Leeg laten om het adres van de projector te gebruiken.",
+          "media_block_port": "Automation over IP-poort, 43748 tenzij die op de ICMP is aangepast."
         }
       }
     }

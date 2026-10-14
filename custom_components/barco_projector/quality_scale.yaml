@@ -1,0 +1,49 @@
+# Status against the Home Assistant integration quality scale.
+# https://developers.home-assistant.io/docs/core/integration-quality-scale/
+#
+# Custom integrations are not graded by Home Assistant; this file records how the
+# integration aligns with the Bronze tier. Higher tiers are not claimed.
+rules:
+  # Bronze
+  action-setup:
+    status: done
+    comment: The actions are registered in async_setup and act on the media players.
+  appropriate-polling:
+    status: done
+    comment: >-
+      Polled every 30 seconds by default, adjustable in the options from 10 to 600. The
+      protocol is blocking, so faster polling would starve commands.
+  brands: done
+  common-modules: done
+  config-flow-test-coverage: done
+  config-flow: done
+  dependency-transparency:
+    status: done
+    comment: No external requirements; the protocol clients are part of the integration.
+  docs-actions: done
+  docs-conditions:
+    status: exempt
+    comment: The integration provides no conditions.
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions: done
+  docs-triggers:
+    status: exempt
+    comment: The integration provides no triggers.
+  entity-event-setup:
+    status: exempt
+    comment: >-
+      Entities do not subscribe to events; they read coordinator data. The extra polls
+      after a command are owned by the coordinator and cancelled when the entry unloads.
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: done
+  test-before-configure: done
+  test-before-setup:
+    status: exempt
+    comment: >-
+      A cinema projector switched off at the mains is a normal state. A projector that
+      answered before is set up from what it reported then, with its entities unavailable
+      until it answers again; only one that has never answered keeps the entry waiting
+      (ConfigEntryNotReady).
+  unique-config-entry: done

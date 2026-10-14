@@ -23,6 +23,7 @@ async def async_get_config_entry_diagnostics(
         },
         "coordinator": {
             "last_update_success": coordinator.last_update_success,
+            "answered_before": coordinator.answered_before,
             "unsupported_commands": sorted(coordinator.unsupported),
             "update_interval": str(coordinator.update_interval),
             "data": asdict(coordinator.data) if coordinator.data else None,

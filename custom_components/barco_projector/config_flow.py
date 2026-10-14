@@ -36,6 +36,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MANUAL_ENTRY,
+    MAX_SCAN_INTERVAL,
     MEDIA_BLOCK_ICMP,
     MEDIA_BLOCK_NONE,
     MIN_SCAN_INTERVAL,
@@ -50,28 +51,25 @@ PORT_SELECTOR = NumberSelector(
     NumberSelectorConfig(min=1, max=65535, step=1, mode=NumberSelectorMode.BOX)
 )
 
+MEDIA_BLOCK_SELECTOR = SelectSelector(
+    SelectSelectorConfig(
+        options=MEDIA_BLOCK_OPTIONS,
+        translation_key="media_block",
+        mode=SelectSelectorMode.DROPDOWN,
+    )
+)
+
 
 def _manual_schema(defaults: dict[str, Any]) -> vol.Schema:
     """Return the schema of the manual entry form."""
     return vol.Schema(
         {
-            vol.Required(
-                CONF_NAME, default=defaults.get(CONF_NAME, DEFAULT_NAME)
-            ): TextSelector(),
+            vol.Required(CONF_NAME, default=defaults.get(CONF_NAME, DEFAULT_NAME)): TextSelector(),
             vol.Required(CONF_HOST, default=defaults.get(CONF_HOST, "")): TextSelector(),
+            vol.Required(CONF_PORT, default=defaults.get(CONF_PORT, DEFAULT_PORT)): PORT_SELECTOR,
             vol.Required(
-                CONF_PORT, default=defaults.get(CONF_PORT, DEFAULT_PORT)
-            ): PORT_SELECTOR,
-            vol.Required(
-                CONF_MEDIA_BLOCK,
-                default=defaults.get(CONF_MEDIA_BLOCK, MEDIA_BLOCK_NONE),
-            ): SelectSelector(
-                SelectSelectorConfig(
-                    options=MEDIA_BLOCK_OPTIONS,
-                    translation_key="media_block",
-                    mode=SelectSelectorMode.DROPDOWN,
-                )
-            ),
+                CONF_MEDIA_BLOCK, default=defaults.get(CONF_MEDIA_BLOCK, MEDIA_BLOCK_NONE)
+            ): MEDIA_BLOCK_SELECTOR,
         }
     )
 
@@ -93,8 +91,7 @@ def _media_block_schema(defaults: dict[str, Any]) -> vol.Schema:
 
 async def _async_test_projector(host: str, port: int) -> str | None:
     """Return an error key when the projector cannot be reached."""
-    client = BarcoClient(host=host, port=port, timeout=6.0)
-    projector = BarcoProjector(client)
+    projector = BarcoProjector(BarcoClient(host=host, port=port, timeout=6.0))
     try:
         await projector.async_get_lamp()
     except BarcoError:
@@ -127,49 +124,39 @@ class BarcoConfigFlow(ConfigFlow, domain=DOMAIN):
         self._discovered: list[DiscoveredProjector] = []
         self._selected: DiscoveredProjector | None = None
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Look for projectors on the network before asking anything."""
-        self._discovered = await async_discover(self.hass)
+        configured = {
+            entry.data.get(CONF_HOST) for entry in self._async_current_entries(include_ignore=False)
+        }
+        self._discovered = [
+            item for item in await async_discover(self.hass) if item.host not in configured
+        ]
         if self._discovered:
             return await self.async_step_pick()
         return await self.async_step_manual()
 
-    async def async_step_pick(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_pick(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Let the user pick one of the discovered projectors."""
         if user_input is not None:
             choice = user_input[CONF_DEVICE]
-            self._selected = next(
-                (item for item in self._discovered if item.host == choice), None
-            )
+            self._selected = next((item for item in self._discovered if item.host == choice), None)
             return await self.async_step_manual()
 
-        options = [
-            SelectOptionDict(value=item.host, label=item.label)
-            for item in self._discovered
-        ]
-        options.append(
-            SelectOptionDict(value=MANUAL_ENTRY, label="Other - enter an address")
-        )
+        options = [SelectOptionDict(value=item.host, label=item.label) for item in self._discovered]
+        options.append(SelectOptionDict(value=MANUAL_ENTRY, label="Other - enter an address"))
         return self.async_show_form(
             step_id="pick",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_DEVICE, default=options[0]["value"]): SelectSelector(
-                        SelectSelectorConfig(
-                            options=options, mode=SelectSelectorMode.LIST
-                        )
+                        SelectSelectorConfig(options=options, mode=SelectSelectorMode.LIST)
                     )
                 }
             ),
         )
 
-    async def async_step_manual(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Ask for the projector connection details."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -193,9 +180,7 @@ class BarcoConfigFlow(ConfigFlow, domain=DOMAIN):
                     self._data[CONF_MODEL] = model
                 if user_input[CONF_MEDIA_BLOCK] == MEDIA_BLOCK_ICMP:
                     return await self.async_step_media_block()
-                return self.async_create_entry(
-                    title=user_input[CONF_NAME], data=self._data
-                )
+                return self.async_create_entry(title=user_input[CONF_NAME], data=self._data)
 
         return self.async_show_form(
             step_id="manual",
@@ -217,9 +202,7 @@ class BarcoConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 self._data[CONF_MEDIA_BLOCK_HOST] = host
                 self._data[CONF_MEDIA_BLOCK_PORT] = port
-                return self.async_create_entry(
-                    title=self._data[CONF_NAME], data=self._data
-                )
+                return self.async_create_entry(title=self._data[CONF_NAME], data=self._data)
 
         return self.async_show_form(
             step_id="media_block",
@@ -253,9 +236,7 @@ class BarcoConfigFlow(ConfigFlow, domain=DOMAIN):
 class BarcoOptionsFlow(OptionsFlow):
     """Handle the options of an existing entry."""
 
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage the options."""
         current = {**self.config_entry.data, **self.config_entry.options}
         errors: dict[str, str] = {}
@@ -269,35 +250,28 @@ class BarcoOptionsFlow(OptionsFlow):
             if media_block == MEDIA_BLOCK_ICMP:
                 # Not every projector holds an ICMP, so check before saving
                 # instead of creating entities that can only fail.
-                error = await _async_test_icmp(
-                    icmp_host or current[CONF_HOST], icmp_port
-                )
+                error = await _async_test_icmp(icmp_host or current[CONF_HOST], icmp_port)
             if error:
                 errors["base"] = error
             else:
-                await self._async_fill_in_model()
-                return self.async_create_entry(
-                    data={
-                        CONF_SCAN_INTERVAL_SECONDS: int(
-                            user_input[CONF_SCAN_INTERVAL_SECONDS]
-                        ),
-                        CONF_MEDIA_BLOCK: media_block,
-                        CONF_MEDIA_BLOCK_HOST: icmp_host,
-                        CONF_MEDIA_BLOCK_PORT: icmp_port,
-                    }
-                )
+                options = {
+                    CONF_SCAN_INTERVAL_SECONDS: int(user_input[CONF_SCAN_INTERVAL_SECONDS]),
+                    CONF_MEDIA_BLOCK: media_block,
+                    CONF_MEDIA_BLOCK_HOST: icmp_host,
+                    CONF_MEDIA_BLOCK_PORT: icmp_port,
+                }
+                await self._async_fill_in_model(options)
+                return self.async_create_entry(data=options)
 
         schema = vol.Schema(
             {
                 vol.Required(
                     CONF_SCAN_INTERVAL_SECONDS,
-                    default=current.get(
-                        CONF_SCAN_INTERVAL_SECONDS, DEFAULT_SCAN_INTERVAL
-                    ),
+                    default=current.get(CONF_SCAN_INTERVAL_SECONDS, DEFAULT_SCAN_INTERVAL),
                 ): NumberSelector(
                     NumberSelectorConfig(
                         min=MIN_SCAN_INTERVAL,
-                        max=600,
+                        max=MAX_SCAN_INTERVAL,
                         step=1,
                         mode=NumberSelectorMode.BOX,
                         unit_of_measurement="s",
@@ -306,13 +280,7 @@ class BarcoOptionsFlow(OptionsFlow):
                 vol.Required(
                     CONF_MEDIA_BLOCK,
                     default=current.get(CONF_MEDIA_BLOCK, MEDIA_BLOCK_NONE),
-                ): SelectSelector(
-                    SelectSelectorConfig(
-                        options=MEDIA_BLOCK_OPTIONS,
-                        translation_key="media_block",
-                        mode=SelectSelectorMode.DROPDOWN,
-                    )
-                ),
+                ): MEDIA_BLOCK_SELECTOR,
                 vol.Optional(
                     CONF_MEDIA_BLOCK_HOST,
                     default=current.get(CONF_MEDIA_BLOCK_HOST, ""),
@@ -323,17 +291,18 @@ class BarcoOptionsFlow(OptionsFlow):
                 ): PORT_SELECTOR,
             }
         )
-        return self.async_show_form(
-            step_id="init", data_schema=schema, errors=errors
-        )
+        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
 
-    async def _async_fill_in_model(self) -> None:
-        """Look the model up once for entries created before discovery existed."""
+    async def _async_fill_in_model(self, options: dict[str, Any]) -> None:
+        """Look the model up once for entries created before discovery existed.
+
+        Data and options are written in one update, so the entry reloads once.
+        """
         entry = self.config_entry
         if entry.data.get(CONF_MODEL):
             return
         model = await async_discover_model(self.hass, entry.data[CONF_HOST])
         if model:
             self.hass.config_entries.async_update_entry(
-                entry, data={**entry.data, CONF_MODEL: model}
+                entry, data={**entry.data, CONF_MODEL: model}, options=options
             )

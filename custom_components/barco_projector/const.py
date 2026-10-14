@@ -13,9 +13,6 @@ PROJECTOR_MODEL: Final = "Digital cinema projector"
 MEDIA_BLOCK_MODEL: Final = "ICMP / ICMP-X"
 
 # Barco LCD/DLP protocol (projector control)
-CONF_SERIES: Final = "series"
-SERIES_1: Final = "series1"
-SERIES_2: Final = "series2"
 PORT_SERIES_1: Final = 43680  # 0xAAA0
 PORT_SERIES_2: Final = 43728  # 0xAAD0
 DEFAULT_PORT: Final = PORT_SERIES_2
@@ -31,6 +28,7 @@ DEFAULT_ICMP_PORT: Final = 43748
 CONF_SCAN_INTERVAL_SECONDS: Final = "scan_interval_seconds"
 DEFAULT_SCAN_INTERVAL: Final = 30
 MIN_SCAN_INTERVAL: Final = 10
+MAX_SCAN_INTERVAL: Final = 600
 
 # How many polls between refreshes of the macro (source) list
 MACRO_REFRESH_EVERY: Final = 20
@@ -38,6 +36,27 @@ MACRO_REFRESH_EVERY: Final = 20
 # Highest macro button number probed when building the source list. Read as one
 # range first; projectors that reject the range fall back to single reads.
 MAX_MACRO_BUTTONS: Final = 32
+
+# Extra polls after a command, in seconds: lamp and dowser need time to settle.
+FOLLOWUP_REFRESH_DELAYS: Final = (2, 10, 30, 60)
+
+# What the projector reported on an earlier run, kept between restarts.
+STORAGE_VERSION: Final = 1
+
+# Optional read commands, and the entities that only exist when they are answered.
+CAPABILITY_LAST_MACRO: Final = "last_macro"
+CAPABILITY_ERRORS: Final = "errors"
+CAPABILITY_SLEEP: Final = "sleep"
+CAPABILITY_MACROS: Final = "macros"
+CAPABILITY_ENTITIES: Final[dict[str, tuple[tuple[str, str], ...]]] = {
+    CAPABILITY_LAST_MACRO: (("sensor", "last_macro"),),
+    CAPABILITY_ERRORS: (
+        ("sensor", "errors"),
+        ("sensor", "warnings"),
+        ("sensor", "notifications"),
+    ),
+    CAPABILITY_SLEEP: (("switch", "sleep"),),
+}
 
 SERVICE_EXECUTE_MACRO: Final = "execute_macro"
 SERVICE_SEND_RAW: Final = "send_raw"
