@@ -40,6 +40,10 @@ MAX_MACRO_BUTTONS: Final = 32
 # Extra polls after a command, in seconds: lamp and dowser need time to settle.
 FOLLOWUP_REFRESH_DELAYS: Final = (2, 10, 30, 60)
 
+# Minimum time between requested polls. Home Assistant's default of 10 seconds made
+# a dowser change show up to 9 seconds late; the polls themselves take ~30 ms.
+REQUEST_REFRESH_COOLDOWN: Final = 1.0
+
 # What the projector reported on an earlier run, kept between restarts.
 STORAGE_VERSION: Final = 1
 

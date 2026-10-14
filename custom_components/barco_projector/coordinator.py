@@ -11,6 +11,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -26,6 +27,7 @@ from .const import (
     FOLLOWUP_REFRESH_DELAYS,
     MACRO_REFRESH_EVERY,
     MAX_MACRO_BUTTONS,
+    REQUEST_REFRESH_COOLDOWN,
     STORAGE_VERSION,
 )
 from .protocol import (
@@ -98,6 +100,9 @@ class BarcoCoordinator(DataUpdateCoordinator[BarcoData]):
             config_entry=entry,
             name=f"{DOMAIN} {entry.title}",
             update_interval=timedelta(seconds=scan_interval),
+            request_refresh_debouncer=Debouncer(
+                hass, _LOGGER, cooldown=REQUEST_REFRESH_COOLDOWN, immediate=True
+            ),
         )
         self.projector = projector
         self.unsupported: set[str] = set()
