@@ -6,14 +6,14 @@
 [![Ruff](https://github.com/Videobarista/barco-projector-ha/actions/workflows/ruff.yml/badge.svg?branch=main)](https://github.com/Videobarista/barco-projector-ha/actions/workflows/ruff.yml)
 [![Tests](https://github.com/Videobarista/barco-projector-ha/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Videobarista/barco-projector-ha/actions/workflows/tests.yml)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Videobarista&repository=barco-projector-ha&category=integration)
-
 [![HACS custom](https://img.shields.io/badge/HACS-custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
 [![Quality scale: Bronze (aligned)](https://img.shields.io/badge/quality%20scale-bronze%20(aligned)-cd7f32.svg)](https://developers.home-assistant.io/docs/core/integration-quality-scale/)
 [![Home Assistant 2025.10+](https://img.shields.io/badge/Home%20Assistant-2025.10%2B-41BDF5.svg)](https://www.home-assistant.io)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Release](https://img.shields.io/github/v/release/Videobarista/barco-projector-ha?display_name=tag)](https://github.com/Videobarista/barco-projector-ha/releases)
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Videobarista&repository=barco-projector-ha&category=integration)
 
 Control a Barco digital cinema projector (DP2K, DP4K, and the older DP series) from Home
 Assistant over the network, without Communicator or any cloud service.
@@ -42,9 +42,9 @@ Worth being precise about, because the two protocols are not equal:
 
 A projector that is powered down stops answering, which is expected rather than an error.
 The integration treats it as a normal state: the entities go unavailable, the connectivity
-sensor goes off, and "Last seen" keeps the timestamp of the last answer. One line at info
-level is logged when it stops answering and one when it returns, so a power cycle does not
-fill the log with errors.
+sensor goes off, and the "Last seen" sensor keeps the timestamp of the last answer. One line
+at info level is logged when it stops answering and one when it returns, so a power cycle
+does not fill the log with errors.
 
 The integration remembers what the projector reported: its macros and which optional
 commands it answers. A Home Assistant restart while the projector is off therefore sets it up
@@ -70,7 +70,7 @@ does not guess.
 | Last macro | `sensor` | Name of the last executed macro |
 | Dowser position | `sensor` | `closed`, `open` or `undetermined` |
 | Errors, Warnings, Notifications | `sensor` | Series 2 only |
-| Last seen | `sensor` | Timestamp of the last successful poll |
+| Last seen | `sensor` | Timestamp of the last successful poll. **Disabled by default**: it changes on every poll, so enabled it stores a new state in the recorder every 30 seconds |
 | Lens focus / zoom / shift | `button` | Eight buttons, one step per press |
 
 **ICMP - Automation over IP, TCP 43748**

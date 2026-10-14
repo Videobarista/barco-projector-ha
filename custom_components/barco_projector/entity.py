@@ -11,8 +11,10 @@ from .const import DOMAIN, MANUFACTURER, MEDIA_BLOCK_MODEL, PROJECTOR_MODEL
 from .coordinator import BarcoCoordinator
 
 # Home Assistant 2026.8 replaced DeviceInfo["via_device"] with "via_device_id".
-# Check the TypedDict itself so the integration keeps working on both.
-SUPPORTS_VIA_DEVICE_ID = "via_device_id" in getattr(DeviceInfo, "__annotations__", {})
+# Check the keys of the TypedDict itself so the integration keeps working on both.
+SUPPORTS_VIA_DEVICE_ID = "via_device_id" in (
+    DeviceInfo.__required_keys__ | DeviceInfo.__optional_keys__
+)
 
 
 def projector_device_info(entry) -> DeviceInfo:

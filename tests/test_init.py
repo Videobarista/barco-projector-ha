@@ -75,7 +75,7 @@ async def test_setup_and_unload(
     await _setup(hass, mock_config_entry)
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, ENTRY_ID)})
+    device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, ENTRY_ID), ENTRY_ID)
     assert device is not None
     assert device.manufacturer == "Barco"
     assert device.model == "Digital cinema projector"
@@ -116,7 +116,7 @@ async def test_discovered_model_on_device(
     await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
 
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, ENTRY_ID)})
+    device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, ENTRY_ID), ENTRY_ID)
     assert device is not None
     assert device.model == "DP2K-6E"
 
@@ -180,6 +180,18 @@ async def test_offline_setup_from_memory(
     assert _state(hass, "switch", "dowser") == STATE_OFF
 
 
+async def test_last_seen_disabled_by_default(
+    hass: HomeAssistant, projector: FakeProjector, mock_config_entry: MockConfigEntry
+) -> None:
+    """Last seen changes on every poll, so it does not fill the recorder unasked."""
+    await _setup(hass, mock_config_entry)
+    entry = er.async_get(hass).async_get(_entity_id(hass, "sensor", "last_seen"))
+    assert entry is not None
+    assert entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+    assert hass.states.get(entry.entity_id) is None
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_goes_offline_while_running(
     hass: HomeAssistant, projector: FakeProjector, mock_config_entry: MockConfigEntry
 ) -> None:
@@ -370,8 +382,8 @@ async def test_icmp(
     assert entry.state is ConfigEntryState.LOADED
 
     registry = dr.async_get(hass)
-    projector_device = registry.async_get_device(identifiers={(DOMAIN, ENTRY_ID)})
-    icmp_device = registry.async_get_device(identifiers={(DOMAIN, f"{ENTRY_ID}_icmp")})
+    projector_device = registry.async_get_device_by_identifier((DOMAIN, ENTRY_ID), ENTRY_ID)
+    icmp_device = registry.async_get_device_by_identifier((DOMAIN, f"{ENTRY_ID}_icmp"), ENTRY_ID)
     assert projector_device is not None
     assert icmp_device is not None
     assert icmp_device.via_device_id == projector_device.id

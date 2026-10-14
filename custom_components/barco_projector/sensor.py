@@ -118,11 +118,16 @@ class BarcoSensor(BarcoProjectorEntity, SensorEntity):
 
 
 class BarcoLastSeenSensor(BarcoProjectorEntity, SensorEntity):
-    """When the projector last answered a poll."""
+    """When the projector last answered a poll.
+
+    The value changes on every poll, so the recorder would store a new state
+    every 30 seconds. It is disabled by default for that reason.
+    """
 
     _attr_translation_key = "last_seen"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: BarcoCoordinator, entry) -> None:
         """Initialise the sensor."""
