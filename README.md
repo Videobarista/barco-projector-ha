@@ -105,14 +105,14 @@ raises an error that says so.
 
 | Action | Field | Required | Description |
 | --- | --- | --- | --- |
-| `execute_macro` | `macro` | yes | Macro name, exactly as stored on the projector, e.g. `2D_FLAT`. |
-| `send_raw` | `command` | yes | Command bytes as hex, e.g. `76 9a`, `0x761a` or `\x76\x1a`. |
-| `send_raw` | `data` | no | Data bytes as hex, e.g. `01`. |
-| `send_automation` | `command` | yes | For example `PLAYER.Pause (seconds),10`; the closing `;` is added for you. |
+| `execute_macro` | `macro` | yes | Macro name, exactly as stored on the projector, e.g. `2D_FLAT`. Printable ASCII, at most 255 characters. |
+| `send_raw` | `command` | yes | Command bytes as hex, e.g. `76 9a`, `0x761a` or `\x76\x1a`. 1 to 8 bytes. |
+| `send_raw` | `data` | no | Data bytes as hex, e.g. `01`. At most 256 bytes. |
+| `send_automation` | `command` | yes | For example `PLAYER.Pause (seconds),10`; the closing `;` is added for you. Printable ASCII, at most 1024 characters; join several commands with `;`. |
 | `gpio_pulse` | `output` | yes | Output number, 1 to 8. |
 | `gpio_pulse` | `duration` | no | Pulse length in milliseconds, 1 to 60000. Default 500. |
 | `gpio_pulse` | `direction` | no | `up` or `down`. Default `up`. |
-| `gpio_set` | `mask` | yes | Outputs and states, e.g. `1=Up,2=Down,3=Down`. |
+| `gpio_set` | `mask` | yes | Outputs 1 to 8 with `Up` or `Down`, e.g. `1=Up,2=Down,3=Down`. Case does not matter. |
 
 Example: switch to a format and open the dowser.
 
@@ -172,7 +172,48 @@ integration options and saving.
   is 15 seconds and a timed-out request is retried once on a fresh connection.
 - Barco's documentation contains one example frame with a miscalculated checksum (lamp write
   on, where the projector address is left out of the sum). The implementation follows the
-  documented formula; incoming frames with a bad checksum are logged, not discarded.
+  documented formula; incoming frames with a bad checksum are logged once per connection, not
+  discarded.
+
+## Security
+
+Both protocols this integration speaks were designed for closed projection booths: they have
+no login and no encryption. Anyone who can reach the projector on the network can switch the
+lamp, move the dowser, run macros and change settings, with or without Home Assistant. Only
+the network can stop that, so put the projector in a separate network segment.
+
+What the integration itself does:
+
+- **Input is checked, not mangled.** Macro names, ICMP text and GPIO output lists must be
+  printable ASCII within fixed lengths; raw commands are limited to real Barco command sizes.
+  Anything else is refused with an error instead of being altered on the way out.
+- **Answers are treated as untrusted.** Frames are capped at 64 KiB with a 15 second timeout,
+  names from the projector are cleaned and capped, the macro list holds at most 32 entries, and
+  discovery answers use the sender's address, at most 16 of them.
+- **No flooding.** One request at a time, as Barco requires, at least 100 ms between commands,
+  and at most two connection attempts per poll while the projector is off.
+- **No open ports.** The integration listens on nothing, apart from a random UDP port for the
+  2.5 seconds of a discovery broadcast while you fill in the setup form.
+- **No secrets, no dependencies.** The protocols have no credentials to store, and the
+  integration uses only the Python standard library and Home Assistant.
+- **Private details stay out of diagnostics.** The projector's address and name are redacted.
+
+The `send_raw` and `send_automation` actions can send any command the projector or the ICMP
+knows, including settings. Every Home Assistant user who can run actions can use them.
+
+Suggested firewall rules for the projector's network segment:
+
+| From | To | Port | Rule |
+| --- | --- | --- | --- |
+| Home Assistant | projector | TCP 43728 (series 1: 43680) | allow |
+| Home Assistant | ICMP | TCP 43748 | allow, only when the ICMP option is used |
+| Management laptop | projector | as needed | allow, or only during maintenance |
+| Projector segment | internet, other segments | any | block (replies to allowed traffic still flow) |
+| Everything else | projector segment | any | block |
+
+Give the projector a fixed IP address, and switch off services on the projector you do not
+use, such as a web interface, SNMP or FTP on the media server. A port scan shows what is open.
+Discovery does not cross network segments; enter the address by hand in that case.
 
 ## Removal
 

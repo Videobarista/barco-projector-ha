@@ -44,6 +44,7 @@ from .const import (
 from .discovery import DiscoveredProjector, async_discover, async_discover_model
 from .icmp import IcmpClient, IcmpError
 from .protocol import BarcoClient, BarcoError, BarcoProjector
+from .validation import is_valid_host
 
 MEDIA_BLOCK_OPTIONS = [MEDIA_BLOCK_NONE, MEDIA_BLOCK_ICMP]
 
@@ -162,13 +163,14 @@ class BarcoConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST].strip()
             port = int(user_input[CONF_PORT])
-            await self.async_set_unique_id(f"{host}:{port}")
-            self._abort_if_unique_id_configured()
-
-            error = await _async_test_projector(host, port)
-            if error:
-                errors["base"] = error
+            if not is_valid_host(host):
+                errors[CONF_HOST] = "invalid_host"
             else:
+                await self.async_set_unique_id(f"{host}:{port}")
+                self._abort_if_unique_id_configured()
+                if error := await _async_test_projector(host, port):
+                    errors["base"] = error
+            if not errors:
                 self._data = {
                     CONF_NAME: user_input[CONF_NAME],
                     CONF_HOST: host,
@@ -196,10 +198,11 @@ class BarcoConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = (user_input.get(CONF_MEDIA_BLOCK_HOST) or "").strip()
             port = int(user_input[CONF_MEDIA_BLOCK_PORT])
-            error = await _async_test_icmp(host or self._data[CONF_HOST], port)
-            if error:
+            if host and not is_valid_host(host):
+                errors[CONF_MEDIA_BLOCK_HOST] = "invalid_host"
+            elif error := await _async_test_icmp(host or self._data[CONF_HOST], port):
                 errors["base"] = error
-            else:
+            if not errors:
                 self._data[CONF_MEDIA_BLOCK_HOST] = host
                 self._data[CONF_MEDIA_BLOCK_PORT] = port
                 return self.async_create_entry(title=self._data[CONF_NAME], data=self._data)
@@ -246,14 +249,15 @@ class BarcoOptionsFlow(OptionsFlow):
             icmp_host = (user_input.get(CONF_MEDIA_BLOCK_HOST) or "").strip()
             icmp_port = int(user_input[CONF_MEDIA_BLOCK_PORT])
 
-            error = None
-            if media_block == MEDIA_BLOCK_ICMP:
+            if icmp_host and not is_valid_host(icmp_host):
+                errors[CONF_MEDIA_BLOCK_HOST] = "invalid_host"
+            elif media_block == MEDIA_BLOCK_ICMP and (
                 # Not every projector holds an ICMP, so check before saving
                 # instead of creating entities that can only fail.
-                error = await _async_test_icmp(icmp_host or current[CONF_HOST], icmp_port)
-            if error:
+                error := await _async_test_icmp(icmp_host or current[CONF_HOST], icmp_port)
+            ):
                 errors["base"] = error
-            else:
+            if not errors:
                 options = {
                     CONF_SCAN_INTERVAL_SECONDS: int(user_input[CONF_SCAN_INTERVAL_SECONDS]),
                     CONF_MEDIA_BLOCK: media_block,

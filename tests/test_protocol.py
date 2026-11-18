@@ -15,15 +15,20 @@ import pytest
 from custom_components.barco_projector.protocol import (
     CMD_LAMP_READ,
     CMD_LAMP_WRITE,
+    MAX_NAME_LENGTH,
     BarcoClient,
     BarcoConnectionError,
+    BarcoInvalidInput,
     BarcoNotAcknowledged,
     BarcoProjector,
     BarcoProtocolError,
     build_frame,
     c_string,
+    clean_text,
     parse_frame,
+    parse_hex,
     split_c_strings,
+    validate_macro_name,
 )
 
 
@@ -225,3 +230,144 @@ async def test_macro_buttons_fall_back_to_single_reads() -> None:
     with patch("asyncio.open_connection", _connect(stream)):
         projector = BarcoProjector(BarcoClient("192.0.2.10", 43728))
         assert await projector.async_get_macro_buttons(2) == ["DCI 185"]
+
+
+# --- input validation -------------------------------------------------------
+
+
+@pytest.mark.parametrize("name", ["DCI 185", "3D_DOLBY_SCOPE", "a" * MAX_NAME_LENGTH, " ~"])
+def test_valid_macro_names(name: str) -> None:
+    """Printable ASCII names up to the limit pass unchanged."""
+    assert validate_macro_name(name) == name
+
+
+@pytest.mark.parametrize(
+    ("name", "reason"),
+    [
+        ("", "may not be empty"),
+        ("a" * (MAX_NAME_LENGTH + 1), "at most 255"),
+        ("Café", "printable ASCII"),
+        ("DCI 185\x00PAUZE", "printable ASCII"),
+        ("DCI 185\r\n", "printable ASCII"),
+    ],
+)
+def test_invalid_macro_names(name: str, reason: str) -> None:
+    """Names that would be changed on the way out are refused, not mangled."""
+    with pytest.raises(BarcoInvalidInput, match=reason):
+        validate_macro_name(name)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("76 9a", b"\x76\x9a"),
+        ("0x761a", b"\x76\x1a"),
+        ("\\x76\\x1a", b"\x76\x1a"),
+        ("76,1A, 01", b"\x76\x1a\x01"),
+    ],
+)
+def test_parse_hex(value: str, expected: bytes) -> None:
+    """The accepted hex spellings all give the same bytes."""
+    assert parse_hex(value) == expected
+
+
+@pytest.mark.parametrize(("value", "reason"), [("zz", "not valid hex"), ("761", "whole number")])
+def test_parse_hex_rejects(value: str, reason: str) -> None:
+    """Text that is not whole bytes of hex is refused."""
+    with pytest.raises(BarcoInvalidInput, match=reason):
+        parse_hex(value)
+
+
+async def test_invalid_macro_is_not_sent() -> None:
+    """A refused macro name never reaches the projector."""
+    stream = FakeStream()
+    with patch("asyncio.open_connection", _connect(stream)) as connect:
+        projector = BarcoProjector(BarcoClient("192.0.2.10", 43728))
+        with pytest.raises(BarcoInvalidInput):
+            await projector.async_execute_macro("Café")
+    connect.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    ("command", "data", "reason"),
+    [
+        (b"", b"", "1 to 8 bytes"),
+        (b"\x00" * 9, b"", "1 to 8 bytes"),
+        (b"\x76\x1a", b"\x00" * 257, "at most 256"),
+    ],
+)
+async def test_raw_command_limits(command: bytes, data: bytes, reason: str) -> None:
+    """Raw commands stay within the size of real Barco commands."""
+    with patch("asyncio.open_connection", _connect(FakeStream())) as connect:
+        projector = BarcoProjector(BarcoClient("192.0.2.10", 43728))
+        with pytest.raises(BarcoInvalidInput, match=reason):
+            await projector.async_send_raw(command, data)
+    connect.assert_not_awaited()
+
+
+# --- data from the projector ------------------------------------------------
+
+
+def test_clean_text() -> None:
+    """Control characters go, and names too long to be real are dropped."""
+    assert clean_text("DCI\t185\x7f ") == "DCI185"
+    assert clean_text("\x01\x02") is None
+    assert clean_text("a" * (MAX_NAME_LENGTH + 1)) is None
+    assert split_c_strings(b"DCI 185\x00\x07\x00" + b"a" * 300 + b"\x00PAUZE\x00") == [
+        "DCI 185",
+        "PAUZE",
+    ]
+
+
+async def test_macro_buttons_capped() -> None:
+    """Never more macros than buttons asked for, whatever the projector sends."""
+    names = b"".join(f"M{index}".encode() + b"\x00" for index in range(40))
+    answer = build_frame(0x00, b"\xe8\x05", b"\x01\x02" + names)
+    stream = FakeStream("fe 00 00 06 06 ff", answer.hex(" "))
+    with patch("asyncio.open_connection", _connect(stream)):
+        projector = BarcoProjector(BarcoClient("192.0.2.10", 43728))
+        assert await projector.async_get_macro_buttons(2) == ["M0", "M1"]
+
+
+async def test_last_macro_too_long_is_dropped() -> None:
+    """A last-macro answer longer than a state can hold is not passed on."""
+    answer = build_frame(0x00, b"\xe8\x01", b"a" * 300 + b"\x00")
+    stream = FakeStream("fe 00 00 06 06 ff", answer.hex(" "))
+    with patch("asyncio.open_connection", _connect(stream)):
+        projector = BarcoProjector(BarcoClient("192.0.2.10", 43728))
+        assert await projector.async_get_last_macro() is None
+
+
+async def test_checksum_warning_once_per_connection(caplog: pytest.LogCaptureFixture) -> None:
+    """A projector with a checksum quirk warns once, not on every poll."""
+    bad_ack = "fe 00 00 06 07 ff"
+    stream = FakeStream(bad_ack, "fe 00 76 9a 00 10 ff", bad_ack, "fe 00 76 9a 00 10 ff")
+    with patch("asyncio.open_connection", _connect(stream)), caplog.at_level(logging.DEBUG):
+        projector = BarcoProjector(BarcoClient("192.0.2.10", 43728))
+        assert await projector.async_get_lamp() is False
+        assert await projector.async_get_lamp() is False
+    mismatches = [record for record in caplog.records if "Checksum" in record.getMessage()]
+    assert [record.levelno for record in mismatches] == [logging.WARNING, logging.DEBUG]
+
+
+# --- pacing -----------------------------------------------------------------
+
+
+async def test_writes_are_paced() -> None:
+    """Two writes in a row are at least the write interval apart; reads are not."""
+    ack = "fe 00 00 06 06 ff"
+    lamp = "fe 00 76 9a 00 10 ff"
+    stream = FakeStream(ack, ack, ack, lamp, ack, lamp)
+    with patch("asyncio.open_connection", _connect(stream)):
+        projector = BarcoProjector(BarcoClient("192.0.2.10", 43728, write_interval=0.2))
+        loop = asyncio.get_running_loop()
+        start = loop.time()
+        await projector.async_set_shutter(True)
+        await projector.async_set_shutter(False)
+        writes = loop.time() - start
+        start = loop.time()
+        await projector.async_get_lamp()
+        await projector.async_get_lamp()
+        reads = loop.time() - start
+    assert writes >= 0.19
+    assert reads < 0.1

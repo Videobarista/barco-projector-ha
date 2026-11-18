@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import BarcoConfigEntry
 from .entity import BarcoProjectorEntity
-from .protocol import BarcoError
+from .protocol import BarcoError, BarcoInvalidInput
 
 
 async def async_setup_entry(
@@ -55,6 +55,8 @@ class BarcoMacroSelect(BarcoProjectorEntity, SelectEntity):
         """Execute the selected macro."""
         try:
             await self.coordinator.projector.async_execute_macro(option)
+        except BarcoInvalidInput as err:
+            raise ServiceValidationError(f"Macro '{option}' cannot be sent: {err}") from err
         except BarcoError as err:
             raise HomeAssistantError(f"Macro '{option}' failed: {err}") from err
         self.coordinator.async_schedule_followups()

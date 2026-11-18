@@ -9,6 +9,8 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.barco_projector.const import DOMAIN
 from custom_components.barco_projector.coordinator import storage_key
+from custom_components.barco_projector.diagnostics import async_get_config_entry_diagnostics
+from homeassistant.components.diagnostics import REDACTED
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -18,7 +20,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from .conftest import (
@@ -458,3 +460,80 @@ async def test_remove_entry_forgets_projector(
     assert await hass.config_entries.async_remove(mock_config_entry.entry_id)
     await hass.async_block_till_done()
     assert storage_key(ENTRY_ID) not in hass_storage
+
+
+async def test_invalid_projector_input(
+    hass: HomeAssistant, projector: FakeProjector, mock_config_entry: MockConfigEntry
+) -> None:
+    """Values the projector cannot take as given are refused with a clear error."""
+    await _setup(hass, mock_config_entry)
+    media_player = _entity_id(hass, "media_player", "projector")
+
+    with pytest.raises(ServiceValidationError, match="printable ASCII"):
+        await hass.services.async_call(
+            DOMAIN, "execute_macro", {ATTR_ENTITY_ID: media_player, "macro": "Café"}, blocking=True
+        )
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            "media_player",
+            "select_source",
+            {ATTR_ENTITY_ID: media_player, "source": "DCI 185\r\nPAUZE"},
+            blocking=True,
+        )
+    with pytest.raises(ServiceValidationError, match="1 to 8 bytes"):
+        await hass.services.async_call(
+            DOMAIN, "send_raw", {ATTR_ENTITY_ID: media_player, "command": "00" * 9}, blocking=True
+        )
+    assert projector.last_macro is None
+
+
+async def test_invalid_icmp_input(
+    hass: HomeAssistant, projector: FakeProjector, icmp: FakeIcmp
+) -> None:
+    """The ICMP actions refuse values the automation protocol does not define."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="DP2K-6E", entry_id=ENTRY_ID, data=dict(ICMP_ENTRY_DATA)
+    )
+    await _setup(hass, entry)
+    player = _entity_id(hass, "media_player", "icmp_player")
+
+    with pytest.raises(ServiceValidationError, match="=Up or =Down"):
+        await hass.services.async_call(
+            DOMAIN, "gpio_set", {ATTR_ENTITY_ID: player, "mask": "1=Sideways"}, blocking=True
+        )
+    icmp.async_gpio.assert_not_awaited()
+
+    await hass.services.async_call(
+        DOMAIN, "gpio_set", {ATTR_ENTITY_ID: player, "mask": "2=down, 1=up"}, blocking=True
+    )
+    icmp.async_gpio.assert_awaited_with("Set Outputs", '"2=Down,1=Up"')
+
+    with pytest.raises(ServiceValidationError, match="printable ASCII"):
+        await hass.services.async_call(
+            DOMAIN, "execute_macro", {ATTR_ENTITY_ID: player, "macro": "Café"}, blocking=True
+        )
+    icmp.async_projector.assert_not_awaited()
+
+    with pytest.raises(ServiceValidationError, match="printable ASCII"):
+        await hass.services.async_call(
+            DOMAIN,
+            "send_automation",
+            {ATTR_ENTITY_ID: player, "command": "PLAYER.Play\nPLAYER.Stop"},
+            blocking=True,
+        )
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+async def test_diagnostics_are_redacted(
+    hass: HomeAssistant, projector: FakeProjector, mock_config_entry: MockConfigEntry
+) -> None:
+    """Diagnostics leave out the address and the name of the projector."""
+    await _setup(hass, mock_config_entry)
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
+    data = diagnostics["entry"]["data"]
+    assert data["host"] == REDACTED
+    assert data["name"] == REDACTED
+    assert data["port"] == 43728
+    assert diagnostics["coordinator"]["data"]["macros"] == MACROS

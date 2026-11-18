@@ -42,7 +42,8 @@
     },
     "error": {
       "cannot_connect": "De projector antwoordde niet op dit adres en deze poort.",
-      "cannot_connect_icmp": "De ICMP-automationserver antwoordde niet op dit adres en deze poort."
+      "cannot_connect_icmp": "De ICMP-automationserver antwoordde niet op dit adres en deze poort.",
+      "invalid_host": "Vul alleen een IP-adres of hostnaam in, zonder http://, poort of pad."
     },
     "abort": {
       "already_configured": "Deze projector is al geconfigureerd."
@@ -65,6 +66,10 @@
           "media_block_port": "Automation over IP-poort, 43748 tenzij die op de ICMP is aangepast."
         }
       }
+    },
+    "error": {
+      "cannot_connect_icmp": "De ICMP-automationserver antwoordde niet op dit adres en deze poort.",
+      "invalid_host": "Vul alleen een IP-adres of hostnaam in, zonder http://, poort of pad."
     }
   },
   "selector": {

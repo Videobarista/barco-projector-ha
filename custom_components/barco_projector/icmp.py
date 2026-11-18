@@ -19,6 +19,15 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 READ_TIMEOUT = 2.0
+# Bytes read per acknowledgement; anything beyond that is not needed.
+REPLY_READ_SIZE = 128
+# Longest command sent in one go, including several commands joined by ';'.
+MAX_COMMAND_LENGTH = 1024
+# Longest quoted string parameter, such as a macro name.
+MAX_STRING_LENGTH = 255
+# Minimum pause between two commands, so a script cannot hammer the server.
+SEND_INTERVAL = 0.1
+GPIO_OUTPUTS = range(1, 9)
 
 
 class IcmpError(Exception):
@@ -33,10 +42,61 @@ class IcmpNotAcknowledged(IcmpError):
     """Raised when the ICMP replies with NACK."""
 
 
+class IcmpInvalidInput(IcmpError, ValueError):
+    """Raised when a value cannot be sent to the ICMP as given."""
+
+
+def _is_printable_ascii(value: str) -> bool:
+    """Return whether every character is printable ASCII (space to tilde)."""
+    return all(" " <= char <= "~" for char in value)
+
+
+def validate_command(command: str) -> str:
+    """Return ``command`` if it is safe to send, else raise.
+
+    The protocol only defines printable ASCII; a line break or a character
+    outside that range used to be dropped silently on the way out.
+    """
+    if not command:
+        raise IcmpInvalidInput("a command may not be empty")
+    if len(command) > MAX_COMMAND_LENGTH:
+        raise IcmpInvalidInput(f"a command may be at most {MAX_COMMAND_LENGTH} characters")
+    if not _is_printable_ascii(command):
+        raise IcmpInvalidInput("a command may only contain printable ASCII characters")
+    return command
+
+
 def quote(value: str) -> str:
-    """Return ``value`` as an escaped, quoted protocol string."""
+    """Return ``value`` as an escaped, quoted protocol string.
+
+    Inside quotes the specification reserves only the backslash and the
+    quotation mark, so ',' and ';' cannot end the parameter or the command.
+    """
+    if not value:
+        raise IcmpInvalidInput("a text value may not be empty")
+    if len(value) > MAX_STRING_LENGTH:
+        raise IcmpInvalidInput(f"a text value may be at most {MAX_STRING_LENGTH} characters")
+    if not _is_printable_ascii(value):
+        raise IcmpInvalidInput("a text value may only contain printable ASCII characters")
     escaped = value.replace("\\", "\\\\").replace('"', '\\"')
     return f'"{escaped}"'
+
+
+def normalise_gpio_mask(mask: str) -> str:
+    """Return a GPIO output list such as ``1=Up,2=Down`` in canonical form, else raise."""
+    entries: dict[int, str] = {}
+    for item in mask.split(","):
+        output, separator, state = (part.strip() for part in item.partition("="))
+        if not separator or not output.isdigit() or int(output) not in GPIO_OUTPUTS:
+            raise IcmpInvalidInput(
+                f"'{item.strip()}' is not an output from 1 to 8 followed by =Up or =Down"
+            )
+        if state.lower() not in ("up", "down"):
+            raise IcmpInvalidInput(f"'{item.strip()}' must end in =Up or =Down")
+        if int(output) in entries:
+            raise IcmpInvalidInput(f"output {int(output)} is listed more than once")
+        entries[int(output)] = state.capitalize()
+    return ",".join(f"{output}={state}" for output, state in entries.items())
 
 
 class IcmpClient:
@@ -51,6 +111,7 @@ class IcmpClient:
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._lock = asyncio.Lock()
+        self._last_send = 0.0
 
     @property
     def connected(self) -> bool:
@@ -97,14 +158,14 @@ class IcmpClient:
         if self._writer is None:
             raise IcmpConnectionError("not connected")
         _LOGGER.debug("ICMP TX %s", command)
-        self._writer.write(command.encode("ascii", errors="ignore"))
+        self._writer.write(command.encode("ascii"))
         await self._writer.drain()
 
     async def _read_reply(self) -> str | None:
         if not self.use_ack or self._reader is None:
             return None
         try:
-            raw = await asyncio.wait_for(self._reader.read(128), READ_TIMEOUT)
+            raw = await asyncio.wait_for(self._reader.read(REPLY_READ_SIZE), READ_TIMEOUT)
         except (TimeoutError, OSError) as err:
             _LOGGER.debug("No acknowledgement read back: %s", err)
             return None
@@ -116,28 +177,40 @@ class IcmpClient:
 
     async def async_send(self, command: str) -> None:
         """Send a raw command; a trailing semicolon is added when missing."""
+        validate_command(command)
         if not command.endswith(";"):
             command = f"{command};"
         async with self._lock:
-            last_error: Exception | None = None
-            for attempt in (1, 2):
-                try:
-                    await self._ensure_connected()
-                    await self._write(command)
-                    reply = await self._read_reply()
-                    if reply and "NACK" in reply.upper():
-                        raise IcmpNotAcknowledged(f"{command} was rejected")
-                    return
-                except IcmpNotAcknowledged:
-                    raise
-                except (OSError, TimeoutError, IcmpConnectionError) as err:
-                    last_error = err
-                    await self._close()
-                    if attempt == 2:
-                        break
-            raise IcmpConnectionError(
-                f"sending to {self.host}:{self.port} failed: {last_error}"
-            ) from last_error
+            loop = asyncio.get_running_loop()
+            wait = self._last_send + SEND_INTERVAL - loop.time()
+            if wait > 0:
+                await asyncio.sleep(wait)
+            try:
+                await self._async_send_locked(command)
+            finally:
+                self._last_send = loop.time()
+
+    async def _async_send_locked(self, command: str) -> None:
+        """Send one command, retrying once on a fresh connection."""
+        last_error: Exception | None = None
+        for attempt in (1, 2):
+            try:
+                await self._ensure_connected()
+                await self._write(command)
+                reply = await self._read_reply()
+                if reply and "NACK" in reply.upper():
+                    raise IcmpNotAcknowledged(f"{command} was rejected")
+                return
+            except IcmpNotAcknowledged:
+                raise
+            except (OSError, TimeoutError, IcmpConnectionError) as err:
+                last_error = err
+                await self._close()
+                if attempt == 2:
+                    break
+        raise IcmpConnectionError(
+            f"sending to {self.host}:{self.port} failed: {last_error}"
+        ) from last_error
 
     # --- player ----------------------------------------------------------
     async def async_player(self, action: str, *params: str) -> None:

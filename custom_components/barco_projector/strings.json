@@ -42,7 +42,8 @@
     },
     "error": {
       "cannot_connect": "The projector did not answer on this address and port.",
-      "cannot_connect_icmp": "The ICMP automation server did not answer on this address and port."
+      "cannot_connect_icmp": "The ICMP automation server did not answer on this address and port.",
+      "invalid_host": "Enter a bare IP address or hostname, without http://, a port or a path."
     },
     "abort": {
       "already_configured": "This projector is already configured."
@@ -65,6 +66,10 @@
           "media_block_port": "Automation over IP port, 43748 unless it was changed on the ICMP."
         }
       }
+    },
+    "error": {
+      "cannot_connect_icmp": "The ICMP automation server did not answer on this address and port.",
+      "invalid_host": "Enter a bare IP address or hostname, without http://, a port or a path."
     }
   },
   "selector": {

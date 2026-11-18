@@ -8,9 +8,14 @@ select = [
   "E",   # pycodestyle errors
   "F",   # pyflakes
   "I",   # isort
+  "S",   # flake8-bandit (security)
   "UP",  # pyupgrade
   "W",   # pycodestyle warnings
 ]
+
+[lint.per-file-ignores]
+# Plain asserts are how pytest checks results.
+"tests/**" = ["S101"]
 
 [lint.isort]
 force-sort-within-sections = true

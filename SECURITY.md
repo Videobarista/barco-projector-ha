@@ -24,4 +24,5 @@ This integration talks to a projector on the local network over an unauthenticat
 plaintext protocol that Barco designed for control rooms. Anyone with access to that
 network segment can control the projector with or without this integration. Keeping the
 projector on a separate VLAN is therefore recommended; it is not something this
-integration can enforce.
+integration can enforce. The [Security section of the README](README.md#security) lists what
+the integration does itself and suggests firewall rules.

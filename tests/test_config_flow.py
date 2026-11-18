@@ -275,3 +275,58 @@ async def test_options_flow_keeps_known_model(
     assert result["type"] is FlowResultType.CREATE_ENTRY
     discover_model.assert_not_awaited()
     assert mock_config_entry.data[CONF_MODEL] == "DP4K-32B"
+
+
+@pytest.mark.parametrize("host", ["http://192.0.2.10", "192.0.2.10:43728", "projector name"])
+async def test_manual_flow_invalid_host(
+    hass: HomeAssistant, projector: FakeProjector, host: str
+) -> None:
+    """Something that is not a bare address is refused before connecting."""
+    result = await _start(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, CONF_HOST: host}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_HOST: "invalid_host"}
+    projector.async_close.assert_not_awaited()
+
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+
+
+async def test_icmp_flow_invalid_host(
+    hass: HomeAssistant, projector: FakeProjector, icmp: FakeIcmp
+) -> None:
+    """A bad ICMP address is refused before connecting; empty means the projector."""
+    result = await _start(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, CONF_MEDIA_BLOCK: MEDIA_BLOCK_ICMP}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_MEDIA_BLOCK_HOST: "http://icmp", CONF_MEDIA_BLOCK_PORT: 43748}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_MEDIA_BLOCK_HOST: "invalid_host"}
+    icmp.async_close.assert_not_awaited()
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_MEDIA_BLOCK_HOST: "", CONF_MEDIA_BLOCK_PORT: 43748}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_MEDIA_BLOCK_HOST] == ""
+
+
+async def test_options_flow_invalid_host(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry, icmp: FakeIcmp
+) -> None:
+    """The options refuse a bad ICMP address and save nothing."""
+    mock_config_entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {**OPTIONS_INPUT, CONF_MEDIA_BLOCK: MEDIA_BLOCK_ICMP, CONF_MEDIA_BLOCK_HOST: "icmp:80"},
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_MEDIA_BLOCK_HOST: "invalid_host"}
+    assert mock_config_entry.options == {}
+    icmp.async_close.assert_not_awaited()

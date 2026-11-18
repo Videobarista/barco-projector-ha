@@ -11,27 +11,15 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import BarcoConfigEntry
 from .entity import BarcoMediaBlockEntity, BarcoProjectorEntity
-from .icmp import IcmpError, quote
-from .protocol import BarcoError
+from .icmp import IcmpError, IcmpInvalidInput, normalise_gpio_mask, quote
+from .protocol import BarcoError, BarcoInvalidInput, parse_hex
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _hex_to_bytes(value: str) -> bytes:
-    """Convert a hex string like ``76 1a`` or ``0x761a`` into bytes."""
-    cleaned = value.lower().replace("0x", "").replace(",", " ").replace("\\x", " ")
-    cleaned = cleaned.replace(" ", "")
-    if len(cleaned) % 2:
-        raise HomeAssistantError(f"'{value}' is not a whole number of bytes")
-    try:
-        return bytes.fromhex(cleaned)
-    except ValueError as err:
-        raise HomeAssistantError(f"'{value}' is not valid hex") from err
 
 
 async def async_setup_entry(
@@ -116,18 +104,20 @@ class BarcoProjectorMediaPlayer(BarcoProjectorEntity, MediaPlayerEntity):
         """Execute a macro by name (also exposed as a service)."""
         try:
             await self.coordinator.projector.async_execute_macro(macro)
+        except BarcoInvalidInput as err:
+            raise ServiceValidationError(f"Macro '{macro}' cannot be sent: {err}") from err
         except BarcoError as err:
             raise HomeAssistantError(f"Macro '{macro}' failed: {err}") from err
         self.coordinator.async_schedule_followups()
 
     async def async_send_raw(self, command: str, data: str = "") -> None:
         """Send an arbitrary Barco command (service)."""
-        command_bytes = _hex_to_bytes(command)
-        data_bytes = _hex_to_bytes(data) if data else b""
-        if not command_bytes:
-            raise HomeAssistantError("command may not be empty")
         try:
+            command_bytes = parse_hex(command)
+            data_bytes = parse_hex(data) if data else b""
             await self.coordinator.projector.async_send_raw(command_bytes, data_bytes)
+        except BarcoInvalidInput as err:
+            raise ServiceValidationError(f"Raw command cannot be sent: {err}") from err
         except BarcoError as err:
             raise HomeAssistantError(f"Raw command failed: {err}") from err
         self.coordinator.async_schedule_followups()
@@ -209,6 +199,8 @@ class BarcoIcmpMediaPlayer(BarcoMediaBlockEntity, MediaPlayerEntity):
         """Send a raw automation command (service)."""
         try:
             await self._icmp.async_send(command)
+        except IcmpInvalidInput as err:
+            raise ServiceValidationError(f"Automation command cannot be sent: {err}") from err
         except IcmpError as err:
             raise HomeAssistantError(f"Automation command failed: {err}") from err
 
@@ -223,7 +215,9 @@ class BarcoIcmpMediaPlayer(BarcoMediaBlockEntity, MediaPlayerEntity):
     async def async_gpio_set(self, mask: str) -> None:
         """Set GPIO outputs, e.g. ``1=Up,2=Down`` (service)."""
         try:
-            await self._icmp.async_gpio("Set Outputs", quote(mask))
+            await self._icmp.async_gpio("Set Outputs", quote(normalise_gpio_mask(mask)))
+        except IcmpInvalidInput as err:
+            raise ServiceValidationError(f"GPIO outputs cannot be set: {err}") from err
         except IcmpError as err:
             raise HomeAssistantError(f"GPIO set failed: {err}") from err
 
@@ -231,6 +225,8 @@ class BarcoIcmpMediaPlayer(BarcoMediaBlockEntity, MediaPlayerEntity):
         """Execute a projector macro through the ICMP (service)."""
         try:
             await self._icmp.async_projector("Execute Macro", quote(macro))
+        except IcmpInvalidInput as err:
+            raise ServiceValidationError(f"Macro '{macro}' cannot be sent: {err}") from err
         except IcmpError as err:
             raise HomeAssistantError(f"Macro '{macro}' failed: {err}") from err
 

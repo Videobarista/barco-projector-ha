@@ -18,10 +18,12 @@ from custom_components.barco_projector.const import (
     MEDIA_BLOCK_NONE,
 )
 from custom_components.barco_projector.coordinator import storage_key
-from custom_components.barco_projector.icmp import IcmpConnectionError
+from custom_components.barco_projector.icmp import IcmpConnectionError, validate_command
 from custom_components.barco_projector.protocol import (
     BarcoConnectionError,
     BarcoProtocolError,
+    validate_macro_name,
+    validate_raw,
 )
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 
@@ -50,7 +52,8 @@ class FakeProjector:
     """A DP2K-6E with the lamp off and the dowser closed.
 
     Set ``online`` to False to make every request fail the way a projector
-    without power does. Write commands are AsyncMocks so tests can inspect them.
+    without power does. Write commands are AsyncMocks so tests can inspect them;
+    they validate their input the way the real client does.
     """
 
     def __init__(self) -> None:
@@ -66,7 +69,7 @@ class FakeProjector:
         self.async_execute_macro = AsyncMock(side_effect=self._execute_macro)
         self.async_set_sleep = AsyncMock()
         self.async_lens = AsyncMock()
-        self.async_send_raw = AsyncMock(return_value=b"")
+        self.async_send_raw = AsyncMock(side_effect=self._send_raw)
         self.async_close = AsyncMock()
 
     def _check(self) -> None:
@@ -82,8 +85,14 @@ class FakeProjector:
         self.shutter = 1 if open_shutter else 0
 
     async def _execute_macro(self, name: str) -> None:
+        validate_macro_name(name)
         self._check()
         self.last_macro = name
+
+    async def _send_raw(self, command: bytes, data: bytes = b"") -> bytes:
+        validate_raw(command, data)
+        self._check()
+        return b""
 
     async def async_get_lamp(self) -> bool:
         """Lamp, read on/off."""
@@ -119,13 +128,13 @@ class FakeProjector:
 
 
 class FakeIcmp:
-    """An ICMP automation server that accepts every command."""
+    """An ICMP automation server that accepts every valid command."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Start reachable."""
         self.reachable = True
         self.connected = False
-        self.async_send = AsyncMock()
+        self.async_send = AsyncMock(side_effect=validate_command)
         self.async_player = AsyncMock()
         self.async_projector = AsyncMock()
         self.async_gpio = AsyncMock()
